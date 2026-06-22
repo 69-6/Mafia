@@ -166,6 +166,7 @@
   .htools{position:sticky; bottom:0; display:flex; gap:8px; margin-top:16px; padding-top:12px;
     border-top:1px solid var(--line)}
   .htools button{flex:1; font-size:13px; padding:11px}
+  .del{flex:none; width:34px; height:34px; padding:0; font-size:15px; background:transparent; color:var(--crimson); border:1px solid var(--line); border-radius:9px}
 
   hr{border:none; border-top:1px solid var(--line); margin:4px 0}
   a.lnk{color:var(--lamp); text-decoration:none}
@@ -212,6 +213,9 @@ const esc = s => (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;
 const now = ()=>Date.now();
 let toastT;
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
+/* تحويل الأرقام العربية/الفارسية إلى إنجليزية */
+function toLatinDigits(s){ return (s||"").replace(/[\u0660-\u0669\u06F0-\u06F9]/g, d=>{ const c=d.charCodeAt(0); return String(c>=0x06F0 ? c-0x06F0 : c-0x0660); }); }
+function digitsOnly(s){ return toLatinDigits(s).replace(/\D/g,""); }
 
 async function pub(topic, obj){
   const data = JSON.stringify(obj);
@@ -484,7 +488,7 @@ const Host = {
     this.S={
       id, v:1, phase:"lobby", round:0, adminToken,
       talkSecs:(mins||DEFAULT_TALK_MIN)*60, revealCards:reveal!==false,
-      players:[{token:adminToken, name:name, pass:null, role:null, alive:true, seen:now(), isAdmin:true}],
+      players:[{token:adminToken, name:name, pin:null, role:null, alive:true, seen:now(), isAdmin:true, claimed:true, in:true}],
       night:null, day:null, dead:[], feed:[], winner:null,
       timerEnds:null, timerLabel:"", lastNight:null, detectiveNotes:[],
     };
@@ -519,25 +523,31 @@ const Host = {
   onInbox(m){
     if(!m||!m.t) return;
     const S=this.S;
-    if(m.t==="join"){
-      const nm=(m.name||"").trim().slice(0,18);
-      const pass=(m.pass||"").trim();
-      if(!nm){ this.nack(m.token,"اكتب اسمك."); return; }
-      const known=this.byToken(m.token);
-      if(known){ known.seen=now(); this.broadcast(); this.pushPrivate(known); return; } // إعادة اتصال بنفس الجهاز
-      const same=this.byName(nm);
-      if(same){
-        // الاسم موجود: يسمح بالاستعادة فقط بكلمة المرور الصحيحة (جهاز جديد / تحديث)
-        if(same.isAdmin){ this.nack(m.token,"هذا اسم الحكم، اختر غيره."); return; }
-        if((same.pass||"")===pass){ same.token=m.token; same.seen=now(); this.broadcast(); this.pushPrivate(same);
-          this.bumpFeed(`عاد ${nm} إلى الغرفة`); this.save(); return; }
-        this.nack(m.token,"الاسم محجوز وكلمة المرور غير صحيحة."); return;
-      }
-      if(S.phase!=="lobby"){ this.nack(m.token,"بدأت اللعبة — لا يمكن الدخول باسم جديد."); return; }
-      if(S.players.length>=10){ this.nack(m.token,"الغرفة ممتلئة (10)."); return; }
-      S.players.push({token:m.token, name:nm, pass, role:null, alive:true, seen:now(), isAdmin:false});
-      this.bumpFeed(`انضمّ ${nm} إلى الغرفة`);
-      this.save(); this.broadcast(); this.pushPrivate(this.byToken(m.token));
+    // تثبيت الاسم: اللاعب يختار اسمه من القائمة ويضع رمزاً
+    if(m.t==="claim"){
+      const e=this.byName((m.name||"").trim());
+      const pin=digitsOnly(m.pin);
+      if(!e){ this.nack(m.token,"الاسم غير موجود في القائمة."); return; }
+      if(e.isAdmin){ this.nack(m.token,"هذا اسم الحكم."); return; }
+      if(!/^\d{4}$/.test(pin)){ this.nack(m.token,"الرمز 4 أرقام."); return; }
+      if(e.claimed && e.token && e.token!==m.token){ this.nack(m.token,"هذا الاسم محجوز."); return; }
+      e.token=m.token; e.pin=pin; e.claimed=true; e.seen=now();
+      this.bumpFeed(`ثبّت ${e.name} اسمه`);
+      this.save(); this.broadcast();
+      pub(this.topic.pv(m.token), {t:"ok", step:"claimed", v:S.v});
+      return;
+    }
+    // الدخول الفعلي: اللاعب يضغط اسمه المقفل ويعيد الرمز
+    if(m.t==="enter"){
+      const e=this.byName((m.name||"").trim());
+      const pin=digitsOnly(m.pin);
+      if(!e||!e.claimed){ this.nack(m.token,"ثبّت اسمك أولاً."); return; }
+      if((e.pin||"")!==pin){ this.nack(m.token,"الرمز غير صحيح."); return; }
+      e.token=m.token; e.in=true; e.seen=now();           // يسمح بالدخول من جهاز جديد بنفس الرمز
+      this.bumpFeed(`${e.name} دخل اللعبة`);
+      this.save(); this.broadcast();
+      pub(this.topic.pv(m.token), {t:"ok", step:"entered", v:S.v});
+      this.pushPrivate(e);
       return;
     }
     if(m.t==="ping"){ const p=this.byToken(m.token); if(p) p.seen=now(); return; }
@@ -563,8 +573,10 @@ const Host = {
 
   /* ---------- بدء اللعبة ---------- */
   start(){
-    const S=this.S, n=S.players.length;
-    if(n<6){ toast("نحتاج 6 لاعبين على الأقل للبدء"); return; }
+    const S=this.S;
+    S.players = S.players.filter(p=>p.in);   // فقط من دخل فعلاً
+    const n=S.players.length;
+    if(n<6){ toast("نحتاج 6 لاعبين دخلوا فعلاً للبدء"); return; }
     if(n>10){ toast("الحد الأقصى 10 لاعبين"); return; }
     const mafia=this.mafiaCount(n);
     const roles=[]; for(let i=0;i<mafia;i++) roles.push("mafia"); roles.push("doctor","detective");
@@ -680,7 +692,7 @@ const Host = {
   /* ---------- بناء الحالة العامة والخاصة ---------- */
   buildPublic(){
     const S=this.S, phase=mapPublic(S.phase), banner=bannerFor(S, phase);
-    const pl=S.players.map(p=>({id:p.token, name:p.name, alive:p.alive, seen:(now()-p.seen)<25000}));
+    const pl=S.players.map(p=>({id:p.claimed?p.token:null, name:p.name, alive:p.alive, claimed:!!p.claimed, in:!!p.in, seen:(now()-p.seen)<25000}));
     const dead=S.dead.map(d=>({name:d.name, role:S.revealCards? d.role : null}));
     let tally=null;
     if(S.phase==="day_vote" && S.day){ tally={}; Object.values(S.day.votes).forEach(t=>{ if(t&&t!=="SKIP") tally[t]=(tally[t]||0)+1; }); tally.__voted=Object.keys(S.day.votes).length; }
@@ -739,22 +751,32 @@ const Host = {
   },
 
   dashboard(){
-    const S=this.S, link=baseURL()+"#j="+S.id, n=S.players.length, ready=n>=6&&n<=10;
-    const list=S.players.map(p=>`<div class="sus ${p.isAdmin?"me":""}">
-        ${p.isAdmin?'<span class="tag host">الحكم</span>':""}
-        <div class="nm">${esc(p.name)}</div>
-        <div class="st">${p.isAdmin?"أنت":((now()-p.seen)<25000?"متّصل":"…")}</div></div>`).join("");
+    const S=this.S, link=baseURL()+"#j="+S.id;
+    const entered=S.players.filter(p=>p.in).length;
+    const ready=entered>=6 && entered<=10;
+    const rows=S.players.map((p,i)=>{
+      const status = p.isAdmin? "أنت (الحكم)" : (p.in? "دخل ✓" : (p.claimed? "ثبّت اسمه 🔒" : "لم يدخل"));
+      const del = p.isAdmin? "" : `<button class="del" data-h="del" data-i="${i}" title="حذف">✕</button>`;
+      return `<div class="sus ${p.isAdmin?"me":""}" style="display:flex;align-items:center;gap:8px;text-align:start">
+        <div style="flex:1"><div class="nm">${esc(p.name)}</div><div class="st">${status}</div></div>${del}</div>`;
+    }).join("");
     body.dataset.phase="lobby"; body.style.setProperty("--lamp","var(--amber)");
     screen.innerHTML=`<div class="stack fade">
-      <div class="row spread"><span class="eyebrow">غرفة جديدة</span><span class="pill"><span class="dot"></span> أنت الحكم: ${esc(S.players[0].name)}</span></div>
+      <div class="row spread"><span class="eyebrow">غرفة جديدة</span><span class="pill"><span class="dot"></span> الحكم: ${esc(S.players[0].name)}</span></div>
 
       <div class="card stack">
-        <div class="sm muted">أرسل الرابط لأصحابك في الدسكورد. كل واحد يدخل باسمه ويحط كلمة مرور تحمي اسمه.</div>
-        <label class="fld">رابط الدخول</label>
-        <div class="row"><input class="mono grow" id="lnk" readonly value="${esc(link)}"><button class="btn" data-h="copylink">نسخ</button></div>
+        <div class="sm muted">١) اكتب أسماء اللاعبين. ٢) انسخ الرابط وأرسله لهم. كل واحد يختار اسمه ويضع رمزاً.</div>
+        <label class="fld">أضف اسم لاعب</label>
+        <div class="row"><input class="grow" id="nm" maxlength="18" placeholder="مثال: خالد"><button class="btn" data-h="addname">إضافة</button></div>
       </div>
 
+      <div class="row spread"><span class="pill">${entered} دخلوا · ${S.players.length} بالقائمة</span><span class="sm muted">للبدء: 6 دخلوا</span></div>
+      <div class="grid">${rows}</div>
+
       <div class="card stack">
+        <label class="fld">رابط الدخول</label>
+        <div class="row"><input class="mono grow" id="lnk" readonly value="${esc(link)}"><button class="btn" data-h="copylink">نسخ</button></div>
+        <hr>
         <div class="switch"><div class="lbl">مدّة النقاش<small>وقت الكلام قبل التصويت كل جولة</small></div>
           <div class="num"><button data-h="min-">−</button><b>${S.talkSecs/60}</b><span>دقيقة</span><button data-h="min+">+</button></div></div>
         <hr>
@@ -762,17 +784,30 @@ const Host = {
           <div class="tgl ${S.revealCards?"on":""}" data-h="reveal"></div></div>
       </div>
 
-      <div class="row spread"><span class="pill">${n} / 10 لاعب</span><span class="sm muted">للبدء: 6 على الأقل</span></div>
-      <div class="grid">${list}</div>
-
-      <button class="btn big full" data-h="start" ${ready?"":"disabled"}>ابدأ اللعبة (${n})</button>
+      <button class="btn big full" data-h="start" ${ready?"":"disabled"}>ابدأ اللعبة (${entered})</button>
       <button class="ghost full" data-h="end">إلغاء الغرفة</button>
       <footer>أبقِ هذه الصفحة مفتوحة طوال اللعبة — جهازك هو من يدير اللعبة.</footer>
     </div>`;
+    const nmEl=$("#nm"); if(nmEl) nmEl.onkeydown=e=>{ if(e.key==="Enter") this.onClick("addname"); };
   },
 
-  onClick(h){
+  onClick(h, el){
     const S=this.S;
+    if(h==="addname"){
+      const inp=$("#nm"); if(!inp) return; const nm=(inp.value||"").trim().slice(0,18);
+      if(!nm){ toast("اكتب اسماً"); return; }
+      if(S.players.some(p=>p.name===nm)){ toast("الاسم مكرر"); return; }
+      if(S.players.length>=10){ toast("الحد الأقصى 10"); return; }
+      S.players.push({token:null, name:nm, pin:null, role:null, alive:true, seen:0, isAdmin:false, claimed:false, in:false});
+      this.save(); this.broadcast(); this.dashboard();
+      const n2=$("#nm"); if(n2){ n2.value=""; n2.focus(); }
+      return;
+    }
+    if(h==="del"){
+      const i=el?+el.dataset.i:-1; const p=S.players[i];
+      if(p && !p.isAdmin){ S.players.splice(i,1); this.save(); this.broadcast(); this.dashboard(); }
+      return;
+    }
     if(h==="copylink"){ navigator.clipboard?.writeText($("#lnk").value); toast("تم نسخ الرابط"); }
     else if(h==="min-"){ S.talkSecs=Math.max(60, S.talkSecs-60); this.save(); this.dashboard(); }
     else if(h==="min+"){ S.talkSecs=Math.min(600, S.talkSecs+60); this.save(); this.dashboard(); }
@@ -788,93 +823,135 @@ const Host = {
    اللاعب
    =========================================================================== */
 const Player = {
-  id:null, token:null, name:null, pass:null, pendName:"", pendPass:"",
-  pub:null, me:null, _subPub:null, _subPv:null, joining:false, lastErr:"", timer:null,
+  id:null, topic:null, token:null, name:null, pin:null, chosen:"",
+  view:"loading", pub:null, me:null, _subPub:null, _subPv:null, timer:null, busy:false,
 
   begin(id){
     this.id=id; this.topic=topics(id);
+    this._subPub=sub(this.topic.pub, m=>this.onPub(m));   // نستمع للقائمة دائماً
     const saved=localStorage.getItem("mafiaMe:"+id);
-    if(saved){ try{ const m=JSON.parse(saved); this.token=m.token; this.name=m.name; this.pass=m.pass; this.connect(); this.sendJoin(); return; }catch{} }
-    this.step1();
+    if(saved){ try{ const m=JSON.parse(saved); this.token=m.token; this.name=m.name; this.pin=m.pin;
+      this.subPv(); this.view="game"; this.sendEnter(); }catch{ this.view="pick"; } }
+    else this.view="pick";
+    this.renderLoading();
   },
   stop(){ this._subPub?.close(); this._subPv?.close(); },
 
-  connect(){
-    this._subPub?.close(); this._subPv?.close();
-    this._subPub=sub(this.topic.pub, m=>this.onPub(m));
-    this._subPv =sub(this.topic.pv(this.token), m=>this.onPv(m), ()=>this.resync());
-    if(!this.timer) this.timer=setInterval(()=>{ if(this.token) pub(this.topic.inbox,{t:"ping",token:this.token}); }, 25000);
+  subPv(){
+    this._subPv?.close();
+    this._subPv=sub(this.topic.pv(this.token), m=>this.onPv(m), ()=>this.resync());
+    if(!this.timer) this.timer=setInterval(()=>{ if(this.token&&this.view==="game") pub(this.topic.inbox,{t:"ping",token:this.token}); }, 25000);
   },
   resync(){ if(this.token) pub(this.topic.inbox,{t:"resync",token:this.token}); },
 
-  /* خطوة 1: اكتب اسمك واختر كلمة مرور */
-  step1(){
+  renderLoading(){
     body.dataset.phase="lobby"; body.style.setProperty("--lamp","var(--amber)");
-    screen.innerHTML=`<div class="stack center fade" style="margin:auto 0">
-      <div class="eyebrow">المدينة</div>
-      <div class="brand disp">المافيا</div>
-      <div class="lead">اكتب اسمك واختر كلمة مرور تحمي اسمك من غيرك.</div>
-      <div class="card stack" style="width:100%;text-align:right">
-        <div><label class="fld">اسمك في اللعبة</label><input id="jn" maxlength="18" placeholder="مثال: خالد" value="${esc(this.pendName)}"></div>
-        <div><label class="fld">كلمة المرور (تحفظها لنفسك)</label><input id="jp" maxlength="20" placeholder="••••••" value="${esc(this.pendPass)}"></div>
-        <div class="err" id="jerr">${esc(this.lastErr)}</div>
-        <button class="btn big full" id="jbtn">تأكيد</button>
-      </div>
-    </div>`;
-    $("#jbtn").onclick=()=>{
-      const nm=$("#jn").value.trim(), pw=$("#jp").value.trim();
-      if(!nm){ this.err("اكتب اسمك"); return; }
-      if(pw.length<3){ this.err("كلمة المرور 3 أحرف على الأقل"); return; }
-      this.pendName=nm; this.pendPass=pw; this.lastErr=""; this.step2();
-    };
+    screen.innerHTML=`<div class="stack center fade"><div class="eyebrow">المدينة</div>
+      <div class="brand disp">المافيا</div><div class="lead">جارٍ الاتصال بالغرفة…</div></div>`;
   },
-  /* خطوة 2: قفل على اسمك — أعد كلمة المرور للدخول */
-  step2(){
-    screen.innerHTML=`<div class="stack center fade" style="margin:auto 0">
-      <div class="eyebrow">تأكيد الدخول</div>
-      <div class="lockchip">🔒 ${esc(this.pendName)}</div>
-      <div class="lead">اسمك محجوز لك. أعد كتابة كلمة المرور للدخول.</div>
-      <div class="card stack" style="width:100%;text-align:right">
-        <div><label class="fld">كلمة المرور</label><input id="jp2" maxlength="20" placeholder="••••••"></div>
-        <div class="err" id="jerr"></div>
-        <button class="btn big full" id="jbtn">دخول</button>
-        <button class="ghost full" id="jback">رجوع / تغيير الاسم</button>
-      </div>
-    </div>`;
-    $("#jp2").focus();
-    $("#jbtn").onclick=()=>{
-      const pw=$("#jp2").value.trim();
-      if(pw!==this.pendPass){ this.err("كلمة المرور غير مطابقة"); return; }
-      this.token=rid(8); this.name=this.pendName; this.pass=this.pendPass; this.joining=true;
-      this.connect(); this.sendJoin();
-      $("#jbtn").disabled=true; $("#jbtn").textContent="جارٍ الدخول…";
-      setTimeout(()=>{ if(this.joining&&!this.pub){ const b=$("#jbtn"); if(b){b.disabled=false;b.textContent="دخول";} this.err("لا يوجد ردّ. تأكد أن الحكم فتح الغرفة وأن الإنترنت يعمل."); } },6000);
-    };
-    $("#jback").onclick=()=>this.step1();
+
+  /* ----- اختيار الاسم من القائمة ----- */
+  renderPick(){
+    const P=this.pub;
+    if(!P){ this.renderLoading(); return; }
+    const names=(P.players||[]);
+    const cells=names.map(p=>{
+      const mine = p.id && p.id===this.token;
+      if(!p.claimed){ return `<div class="sus clk" data-name="${esc(p.name)}"><div class="nm">${esc(p.name)}</div><div class="st">اضغط لاختياره</div></div>`; }
+      if(mine){ return `<div class="sus clk me" data-mine="${esc(p.name)}"><div class="nm">🔒 ${esc(p.name)}</div><div class="st">اسمك — ادخل</div></div>`; }
+      return `<div class="sus dead"><div class="nm">🔒 ${esc(p.name)}</div><div class="st">محجوز</div></div>`;
+    }).join("") || `<div class="muted sm" style="grid-column:1/-1;text-align:center;padding:18px">بانتظار أن يضيف الحكم الأسماء…</div>`;
+    body.dataset.phase="lobby"; body.style.setProperty("--lamp","var(--amber)");
+    screen.innerHTML=`<div class="stack fade">
+      <div class="eyebrow">المدينة — اختر اسمك</div>
+      <div class="banner"><div class="ph">من أنت؟</div><div class="sub">اضغط على اسمك من القائمة</div></div>
+      <div class="grid">${cells}</div>
+      <footer>لا تجد اسمك؟ اطلب من الحكم إضافته.</footer></div>`;
+    screen.querySelectorAll("[data-name]").forEach(el=>el.onclick=()=>this.setPin(el.dataset.name));
+    screen.querySelectorAll("[data-mine]").forEach(el=>el.onclick=()=>this.login(el.dataset.mine));
   },
-  sendJoin(){ pub(this.topic.inbox,{t:"join", token:this.token, name:this.name, pass:this.pass}); },
-  err(s){ this.lastErr=s; const e=$("#jerr"); if(e) e.textContent=s; },
+
+  /* ----- وضع رمز PIN للاسم المختار ----- */
+  setPin(name){
+    this.chosen=name; this.view="setpin";
+    body.dataset.phase="lobby";
+    screen.innerHTML=`<div class="stack center fade" style="margin:auto 0">
+      <div class="eyebrow">تثبيت الاسم</div>
+      <div class="lockchip">${esc(name)}</div>
+      <div class="lead">اختر رمزاً من 4 أرقام يحمي اسمك. احفظه — ستحتاجه للدخول.</div>
+      <div class="card stack" style="width:100%">
+        <input id="pp" class="pin" inputmode="numeric" maxlength="4" placeholder="••••">
+        <div class="err" id="perr"></div>
+        <button class="btn big full" id="pbtn">تثبيت</button>
+        <button class="ghost full" id="pback">رجوع للقائمة</button>
+      </div></div>`;
+    const inp=$("#pp"); inp.focus();
+    inp.oninput=e=>e.target.value=digitsOnly(e.target.value).slice(0,4);
+    $("#pbtn").onclick=()=>{
+      const pin=digitsOnly(inp.value);
+      if(!/^\d{4}$/.test(pin)){ $("#perr").textContent="الرمز 4 أرقام"; return; }
+      this.token=this.token||rid(8); this.pin=pin; this.busy=true;
+      this.subPv(); pub(this.topic.inbox,{t:"claim", token:this.token, name:name, pin});
+      $("#pbtn").disabled=true; $("#pbtn").textContent="جارٍ التثبيت…";
+      setTimeout(()=>{ if(this.busy){ const b=$("#pbtn"); if(b){b.disabled=false;b.textContent="تثبيت";} $("#perr").textContent="لا يوجد ردّ. تأكد أن الحكم فتح الغرفة."; } },6000);
+    };
+    $("#pback").onclick=()=>{ this.view="pick"; this.renderPick(); };
+  },
+
+  /* ----- الدخول: أعد الرمز ----- */
+  login(name){
+    this.chosen=name; this.view="login";
+    body.dataset.phase="lobby";
+    screen.innerHTML=`<div class="stack center fade" style="margin:auto 0">
+      <div class="eyebrow">الدخول</div>
+      <div class="lockchip">🔒 ${esc(name)}</div>
+      <div class="lead">أدخل رمزك للدخول إلى اللعبة.</div>
+      <div class="card stack" style="width:100%">
+        <input id="lp" class="pin" inputmode="numeric" maxlength="4" placeholder="••••">
+        <div class="err" id="lerr"></div>
+        <button class="btn big full" id="lbtn">دخول</button>
+        <button class="ghost full" id="lback">رجوع للقائمة</button>
+      </div></div>`;
+    const inp=$("#lp"); inp.focus();
+    inp.oninput=e=>e.target.value=digitsOnly(e.target.value).slice(0,4);
+    $("#lbtn").onclick=()=>{
+      const pin=digitsOnly(inp.value);
+      if(!/^\d{4}$/.test(pin)){ $("#lerr").textContent="الرمز 4 أرقام"; return; }
+      this.name=name; this.pin=pin; this.busy=true;
+      this.subPv(); this.sendEnter();
+      $("#lbtn").disabled=true; $("#lbtn").textContent="جارٍ الدخول…";
+      setTimeout(()=>{ if(this.busy){ const b=$("#lbtn"); if(b){b.disabled=false;b.textContent="دخول";} $("#lerr").textContent="تعذّر الدخول. تحقق من الرمز والاتصال."; } },6000);
+    };
+    $("#lback").onclick=()=>{ this.view="pick"; this.renderPick(); };
+  },
+  sendEnter(){ pub(this.topic.inbox,{t:"enter", token:this.token, name:this.name, pin:this.pin}); },
 
   onPub(m){
     if(m.t!=="state") return; if(this.pub && m.v<this.pub.v) return; this.pub=m;
-    if(this.joining){ const meIn=m.players.find(p=>p.id===this.token); if(meIn){ this.confirmJoin(); } }
-    this.render();
+    if(this.view==="pick"||this.view==="picklocked") this.renderPick();
+    else if(this.view==="game") this.render();
   },
   onPv(m){
-    if(m.t==="nack"){ this.joining=false; localStorage.removeItem("mafiaMe:"+this.id);
-      const b=$("#jbtn"); if(b){ b.disabled=false; b.textContent="دخول"; } this.err(m.msg||"تعذّر الدخول");
-      if(!this.pub) this.step2(); return; }
-    if(m.t==="you"){ if(this.me && m.v<this.me.v) return; this.me=m; if(this.joining) this.confirmJoin(); this.render(); }
+    if(m.t==="nack"){ this.busy=false;
+      if(this.view==="game" && !this.me){ localStorage.removeItem("mafiaMe:"+this.id); this.token=null; this.view="pick"; this.renderPick(); toast(m.msg||"تعذّر الدخول"); return; }
+      const pe=$("#perr"), le=$("#lerr"); if(pe) pe.textContent=m.msg||"تعذّر"; if(le) le.textContent=m.msg||"تعذّر";
+      const pb=$("#pbtn"), lb=$("#lbtn"); if(pb){pb.disabled=false;pb.textContent="تثبيت";} if(lb){lb.disabled=false;lb.textContent="دخول";}
+      return; }
+    if(m.t==="ok"){
+      this.busy=false;
+      if(m.step==="claimed"){ this.name=this.chosen;
+        localStorage.setItem("mafiaMe:"+this.id, JSON.stringify({token:this.token,name:this.name,pin:this.pin}));
+        this.view="picklocked"; this.renderPick(); toast("ثُبّت اسمك ✓ — اضغط عليه وادخل رمزك"); }
+      else if(m.step==="entered"){ localStorage.setItem("mafiaMe:"+this.id, JSON.stringify({token:this.token,name:this.name,pin:this.pin})); this.view="game"; this.render(); }
+      return;
+    }
+    if(m.t==="you"){ if(this.me && m.v<this.me.v) return; this.me=m; if(this.view==="game") this.render(); }
   },
-  confirmJoin(){ if(!this.joining) return; this.joining=false; localStorage.setItem("mafiaMe:"+this.id, JSON.stringify({token:this.token,name:this.name,pass:this.pass})); },
 
-  act(action, target){
-    pub(this.topic.inbox,{t:"act", token:this.token, phase:hostPhaseFromPublic(this.pub), action, target});
-    toast("تم الإرسال ✓");
-  },
+  act(action, target){ pub(this.topic.inbox,{t:"act", token:this.token, phase:hostPhaseFromPublic(this.pub), action, target}); toast("تم الإرسال ✓"); },
 
   render(){
-    if(App.mode!=="player"||!this.pub) return;
+    if(App.mode!=="player"||this.view!=="game"||!this.pub) return;
     const ctx={ act:(a,t)=>this.act(a,t), resync:()=>this.resync(), name:this.name, token:this.token };
     UI.show(this.pub, this.me, ctx);
     UI.tick();
@@ -938,7 +1015,7 @@ function renderLanding(activeHost){
 /* تفويض نقرات أزرار الحكم data-h */
 document.addEventListener("click", e=>{
   const h=e.target.closest("[data-h]");
-  if(h && App.mode==="host"){ Host.onClick(h.dataset.h); }
+  if(h && App.mode==="host"){ Host.onClick(h.dataset.h, h); }
 });
 window.addEventListener("hashchange", ()=>location.reload());
 route();
