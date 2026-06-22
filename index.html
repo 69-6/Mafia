@@ -325,13 +325,14 @@ const UI = {
   },
 
   lobby(P, ctx){
-    const list=P.players.map(p=>`<div class="sus ${p.id===ctx.token?"me":""}"><div class="nm">${esc(p.name)}</div><div class="st">${p.seen?"متّصل":"…"}</div></div>`).join("")
+    const ready=P.players.filter(p=>p.in).length, total=P.players.length;
+    const list=P.players.map(p=>`<div class="sus ${p.id&&p.id===ctx.token?"me":""} ${p.in?"":"dead"}"><div class="nm">${esc(p.name)}</div><div class="st">${p.in?"جاهز ✓":"بالانتظار…"}</div></div>`).join("")
       || `<div class="muted sm" style="grid-column:1/-1;text-align:center;padding:18px">لا أحد بعد…</div>`;
     screen.innerHTML=`<div class="stack fade">
-      <div class="row spread"><span class="eyebrow">غرفة الانتظار</span><span class="pill"><span class="dot"></span> ${esc(ctx.name||"")}</span></div>
-      <div class="banner"><div class="ph">بانتظار البدء</div><div class="sub">${P.players.length} في الغرفة</div></div>
+      <div class="row spread"><span class="eyebrow">اللوبي</span><span class="pill"><span class="dot"></span> ${esc(ctx.name||"")}</span></div>
+      <div class="banner"><div class="ph">${ready} / ${total} جاهزين</div><div class="sub">تبدأ اللعبة تلقائياً عند دخول الجميع</div></div>
       <div class="grid">${list}</div>
-      <footer>سيبدأ الحكم اللعبة متى ما اكتمل أصحابك.</footer></div>`;
+      <footer>انتظر بقية اللاعبين…</footer></div>`;
     this.flipped=false;
   },
 
@@ -483,12 +484,14 @@ const Host = {
 
   mafiaCount(n){ return n<=7 ? 2 : 3; },
 
-  create({name, mins, reveal}){
+  create({name, names, mins, reveal}){
     const id=rid(8), adminToken=rid(8);
+    const roster=[{token:adminToken, name:name, pin:null, role:null, alive:true, seen:now(), isAdmin:true, claimed:true, in:true}];
+    (names||[]).forEach(nm=>{ const t=(nm||"").trim().slice(0,18); if(t && t!==name && !roster.some(p=>p.name===t)) roster.push({token:null, name:t, pin:null, role:null, alive:true, seen:0, isAdmin:false, claimed:false, in:false}); });
     this.S={
       id, v:1, phase:"lobby", round:0, adminToken,
       talkSecs:(mins||DEFAULT_TALK_MIN)*60, revealCards:reveal!==false,
-      players:[{token:adminToken, name:name, pin:null, role:null, alive:true, seen:now(), isAdmin:true, claimed:true, in:true}],
+      players:roster,
       night:null, day:null, dead:[], feed:[], winner:null,
       timerEnds:null, timerLabel:"", lastNight:null, detectiveNotes:[],
     };
@@ -523,31 +526,23 @@ const Host = {
   onInbox(m){
     if(!m||!m.t) return;
     const S=this.S;
-    // تثبيت الاسم: اللاعب يختار اسمه من القائمة ويضع رمزاً
-    if(m.t==="claim"){
+    // الدخول: يضغط اسمه → يضع الرمز مرة واحدة → يدخل اللوبي مباشرة
+    // (أول مرة: يثبّت الرمز. لاحقاً/جهاز آخر: لازم نفس الرمز)
+    if(m.t==="enter"){
       const e=this.byName((m.name||"").trim());
       const pin=digitsOnly(m.pin);
       if(!e){ this.nack(m.token,"الاسم غير موجود في القائمة."); return; }
       if(e.isAdmin){ this.nack(m.token,"هذا اسم الحكم."); return; }
       if(!/^\d{4}$/.test(pin)){ this.nack(m.token,"الرمز 4 أرقام."); return; }
-      if(e.claimed && e.token && e.token!==m.token){ this.nack(m.token,"هذا الاسم محجوز."); return; }
-      e.token=m.token; e.pin=pin; e.claimed=true; e.seen=now();
-      this.bumpFeed(`ثبّت ${e.name} اسمه`);
-      this.save(); this.broadcast();
-      pub(this.topic.pv(m.token), {t:"ok", step:"claimed", v:S.v});
-      return;
-    }
-    // الدخول الفعلي: اللاعب يضغط اسمه المقفل ويعيد الرمز
-    if(m.t==="enter"){
-      const e=this.byName((m.name||"").trim());
-      const pin=digitsOnly(m.pin);
-      if(!e||!e.claimed){ this.nack(m.token,"ثبّت اسمك أولاً."); return; }
-      if((e.pin||"")!==pin){ this.nack(m.token,"الرمز غير صحيح."); return; }
-      e.token=m.token; e.in=true; e.seen=now();           // يسمح بالدخول من جهاز جديد بنفس الرمز
-      this.bumpFeed(`${e.name} دخل اللعبة`);
+      if(S.phase!=="lobby" && !(e.claimed && e.pin===pin)){ this.nack(m.token,"بدأت اللعبة."); return; }
+      if(!e.claimed){ e.pin=pin; e.claimed=true; }        // أول مرة: تثبيت الرمز
+      else if(e.pin!==pin){ this.nack(m.token,"الرمز غير صحيح."); return; }  // اسم محجوز
+      e.token=m.token; e.in=true; e.seen=now();
+      this.bumpFeed(`${e.name} دخل اللوبي`);
       this.save(); this.broadcast();
       pub(this.topic.pv(m.token), {t:"ok", step:"entered", v:S.v});
       this.pushPrivate(e);
+      this.maybeAutoStart();
       return;
     }
     if(m.t==="ping"){ const p=this.byToken(m.token); if(p) p.seen=now(); return; }
@@ -588,6 +583,12 @@ const Host = {
     this.bumpFeed(`بدأت اللعبة — ${n} لاعبين، ${mafia} مافيا`);
     this.setPhase("reveal", SECONDS.reveal);
     this.save(); this.broadcast(); this.pushAllPrivate();
+  },
+
+  maybeAutoStart(){
+    const S=this.S; if(S.phase!=="lobby") return;
+    const total=S.players.length, entered=S.players.filter(p=>p.in).length;
+    if(entered>=6 && entered<=10 && entered===total){ this.start(); }
   },
 
   setPhase(p, secs, label){
@@ -755,7 +756,7 @@ const Host = {
     const entered=S.players.filter(p=>p.in).length;
     const ready=entered>=6 && entered<=10;
     const rows=S.players.map((p,i)=>{
-      const status = p.isAdmin? "أنت (الحكم)" : (p.in? "دخل ✓" : (p.claimed? "ثبّت اسمه 🔒" : "لم يدخل"));
+      const status = p.isAdmin? "أنت (الحكم)" : (p.in? "جاهز ✓" : (p.claimed? "ثبّت اسمه 🔒" : "لم يدخل"));
       const del = p.isAdmin? "" : `<button class="del" data-h="del" data-i="${i}" title="حذف">✕</button>`;
       return `<div class="sus ${p.isAdmin?"me":""}" style="display:flex;align-items:center;gap:8px;text-align:start">
         <div style="flex:1"><div class="nm">${esc(p.name)}</div><div class="st">${status}</div></div>${del}</div>`;
@@ -765,12 +766,12 @@ const Host = {
       <div class="row spread"><span class="eyebrow">غرفة جديدة</span><span class="pill"><span class="dot"></span> الحكم: ${esc(S.players[0].name)}</span></div>
 
       <div class="card stack">
-        <div class="sm muted">١) اكتب أسماء اللاعبين. ٢) انسخ الرابط وأرسله لهم. كل واحد يختار اسمه ويضع رمزاً.</div>
-        <label class="fld">أضف اسم لاعب</label>
+        <div class="sm muted">الأسماء اللي أضفتها ظاهرة بالأسفل. تقدر تضيف أو تحذف. أرسل الرابط، وكل واحد يضغط اسمه ويحط رمزه.</div>
+        <label class="fld">إضافة اسم آخر</label>
         <div class="row"><input class="grow" id="nm" maxlength="18" placeholder="مثال: خالد"><button class="btn" data-h="addname">إضافة</button></div>
       </div>
 
-      <div class="row spread"><span class="pill">${entered} دخلوا · ${S.players.length} بالقائمة</span><span class="sm muted">للبدء: 6 دخلوا</span></div>
+      <div class="row spread"><span class="pill">${entered} جاهزين · ${S.players.length} بالقائمة</span><span class="sm muted">يبدأ تلقائياً عند دخول الجميع</span></div>
       <div class="grid">${rows}</div>
 
       <div class="card stack">
@@ -784,7 +785,8 @@ const Host = {
           <div class="tgl ${S.revealCards?"on":""}" data-h="reveal"></div></div>
       </div>
 
-      <button class="btn big full" data-h="start" ${ready?"":"disabled"}>ابدأ اللعبة (${entered})</button>
+      <button class="btn big full" data-h="start" ${ready?"":"disabled"}>ابدأ الآن (${entered})</button>
+      <div class="sm muted" style="text-align:center">يبدأ تلقائياً متى دخل كل من في القائمة — أو ابدأ يدوياً عند 6 فأكثر.</div>
       <button class="ghost full" data-h="end">إلغاء الغرفة</button>
       <footer>أبقِ هذه الصفحة مفتوحة طوال اللعبة — جهازك هو من يدير اللعبة.</footer>
     </div>`;
@@ -856,10 +858,9 @@ const Player = {
     if(!P){ this.renderLoading(); return; }
     const names=(P.players||[]);
     const cells=names.map(p=>{
+      if(!p.claimed){ return `<div class="sus clk" data-name="${esc(p.name)}" data-claimed="0"><div class="nm">${esc(p.name)}</div><div class="st">اضغط لاختياره</div></div>`; }
       const mine = p.id && p.id===this.token;
-      if(!p.claimed){ return `<div class="sus clk" data-name="${esc(p.name)}"><div class="nm">${esc(p.name)}</div><div class="st">اضغط لاختياره</div></div>`; }
-      if(mine){ return `<div class="sus clk me" data-mine="${esc(p.name)}"><div class="nm">🔒 ${esc(p.name)}</div><div class="st">اسمك — ادخل</div></div>`; }
-      return `<div class="sus dead"><div class="nm">🔒 ${esc(p.name)}</div><div class="st">محجوز</div></div>`;
+      return `<div class="sus clk ${mine?"me":""}" data-name="${esc(p.name)}" data-claimed="1"><div class="nm">🔒 ${esc(p.name)}</div><div class="st">${mine?"اسمك — ادخل":"محجوز (رمزك للاستعادة)"}</div></div>`;
     }).join("") || `<div class="muted sm" style="grid-column:1/-1;text-align:center;padding:18px">بانتظار أن يضيف الحكم الأسماء…</div>`;
     body.dataset.phase="lobby"; body.style.setProperty("--lamp","var(--amber)");
     screen.innerHTML=`<div class="stack fade">
@@ -867,22 +868,21 @@ const Player = {
       <div class="banner"><div class="ph">من أنت؟</div><div class="sub">اضغط على اسمك من القائمة</div></div>
       <div class="grid">${cells}</div>
       <footer>لا تجد اسمك؟ اطلب من الحكم إضافته.</footer></div>`;
-    screen.querySelectorAll("[data-name]").forEach(el=>el.onclick=()=>this.setPin(el.dataset.name));
-    screen.querySelectorAll("[data-mine]").forEach(el=>el.onclick=()=>this.login(el.dataset.mine));
+    screen.querySelectorAll("[data-name]").forEach(el=>el.onclick=()=>this.pinScreen(el.dataset.name, el.dataset.claimed==="1"));
   },
 
-  /* ----- وضع رمز PIN للاسم المختار ----- */
-  setPin(name){
-    this.chosen=name; this.view="setpin";
+  /* ----- شاشة الرمز (مرة واحدة) ثم اللوبي مباشرة ----- */
+  pinScreen(name, claimed){
+    this.chosen=name; this.view="pin";
     body.dataset.phase="lobby";
     screen.innerHTML=`<div class="stack center fade" style="margin:auto 0">
-      <div class="eyebrow">تثبيت الاسم</div>
-      <div class="lockchip">${esc(name)}</div>
-      <div class="lead">اختر رمزاً من 4 أرقام يحمي اسمك. احفظه — ستحتاجه للدخول.</div>
+      <div class="eyebrow">${claimed?"الدخول":"تثبيت الاسم"}</div>
+      <div class="lockchip">${claimed?"🔒 ":""}${esc(name)}</div>
+      <div class="lead">${claimed?"أدخل رمزك للدخول.":"اختر رمزاً من 4 أرقام يحمي اسمك. احفظه."}</div>
       <div class="card stack" style="width:100%">
         <input id="pp" class="pin" inputmode="numeric" maxlength="4" placeholder="••••">
         <div class="err" id="perr"></div>
-        <button class="btn big full" id="pbtn">تثبيت</button>
+        <button class="btn big full" id="pbtn">${claimed?"دخول":"تثبيت ودخول"}</button>
         <button class="ghost full" id="pback">رجوع للقائمة</button>
       </div></div>`;
     const inp=$("#pp"); inp.focus();
@@ -890,60 +890,30 @@ const Player = {
     $("#pbtn").onclick=()=>{
       const pin=digitsOnly(inp.value);
       if(!/^\d{4}$/.test(pin)){ $("#perr").textContent="الرمز 4 أرقام"; return; }
-      this.token=this.token||rid(8); this.pin=pin; this.busy=true;
-      this.subPv(); pub(this.topic.inbox,{t:"claim", token:this.token, name:name, pin});
-      $("#pbtn").disabled=true; $("#pbtn").textContent="جارٍ التثبيت…";
-      setTimeout(()=>{ if(this.busy){ const b=$("#pbtn"); if(b){b.disabled=false;b.textContent="تثبيت";} $("#perr").textContent="لا يوجد ردّ. تأكد أن الحكم فتح الغرفة."; } },6000);
+      this.token=this.token||rid(8); this.name=name; this.pin=pin; this.busy=true;
+      this.subPv(); this.sendEnter();
+      $("#pbtn").disabled=true; $("#pbtn").textContent="جارٍ الدخول…";
+      setTimeout(()=>{ if(this.busy){ const b=$("#pbtn"); if(b){b.disabled=false;b.textContent=claimed?"دخول":"تثبيت ودخول";} $("#perr").textContent="لا يوجد ردّ. تأكد أن الحكم فتح الغرفة."; } },6000);
     };
     $("#pback").onclick=()=>{ this.view="pick"; this.renderPick(); };
-  },
-
-  /* ----- الدخول: أعد الرمز ----- */
-  login(name){
-    this.chosen=name; this.view="login";
-    body.dataset.phase="lobby";
-    screen.innerHTML=`<div class="stack center fade" style="margin:auto 0">
-      <div class="eyebrow">الدخول</div>
-      <div class="lockchip">🔒 ${esc(name)}</div>
-      <div class="lead">أدخل رمزك للدخول إلى اللعبة.</div>
-      <div class="card stack" style="width:100%">
-        <input id="lp" class="pin" inputmode="numeric" maxlength="4" placeholder="••••">
-        <div class="err" id="lerr"></div>
-        <button class="btn big full" id="lbtn">دخول</button>
-        <button class="ghost full" id="lback">رجوع للقائمة</button>
-      </div></div>`;
-    const inp=$("#lp"); inp.focus();
-    inp.oninput=e=>e.target.value=digitsOnly(e.target.value).slice(0,4);
-    $("#lbtn").onclick=()=>{
-      const pin=digitsOnly(inp.value);
-      if(!/^\d{4}$/.test(pin)){ $("#lerr").textContent="الرمز 4 أرقام"; return; }
-      this.name=name; this.pin=pin; this.busy=true;
-      this.subPv(); this.sendEnter();
-      $("#lbtn").disabled=true; $("#lbtn").textContent="جارٍ الدخول…";
-      setTimeout(()=>{ if(this.busy){ const b=$("#lbtn"); if(b){b.disabled=false;b.textContent="دخول";} $("#lerr").textContent="تعذّر الدخول. تحقق من الرمز والاتصال."; } },6000);
-    };
-    $("#lback").onclick=()=>{ this.view="pick"; this.renderPick(); };
   },
   sendEnter(){ pub(this.topic.inbox,{t:"enter", token:this.token, name:this.name, pin:this.pin}); },
 
   onPub(m){
     if(m.t!=="state") return; if(this.pub && m.v<this.pub.v) return; this.pub=m;
-    if(this.view==="pick"||this.view==="picklocked") this.renderPick();
+    if(this.view==="pick") this.renderPick();
     else if(this.view==="game") this.render();
   },
   onPv(m){
     if(m.t==="nack"){ this.busy=false;
       if(this.view==="game" && !this.me){ localStorage.removeItem("mafiaMe:"+this.id); this.token=null; this.view="pick"; this.renderPick(); toast(m.msg||"تعذّر الدخول"); return; }
-      const pe=$("#perr"), le=$("#lerr"); if(pe) pe.textContent=m.msg||"تعذّر"; if(le) le.textContent=m.msg||"تعذّر";
-      const pb=$("#pbtn"), lb=$("#lbtn"); if(pb){pb.disabled=false;pb.textContent="تثبيت";} if(lb){lb.disabled=false;lb.textContent="دخول";}
+      const pe=$("#perr"); if(pe) pe.textContent=m.msg||"تعذّر";
+      const pb=$("#pbtn"); if(pb){pb.disabled=false;pb.textContent="دخول";}
       return; }
-    if(m.t==="ok"){
+    if(m.t==="ok" && m.step==="entered"){
       this.busy=false;
-      if(m.step==="claimed"){ this.name=this.chosen;
-        localStorage.setItem("mafiaMe:"+this.id, JSON.stringify({token:this.token,name:this.name,pin:this.pin}));
-        this.view="picklocked"; this.renderPick(); toast("ثُبّت اسمك ✓ — اضغط عليه وادخل رمزك"); }
-      else if(m.step==="entered"){ localStorage.setItem("mafiaMe:"+this.id, JSON.stringify({token:this.token,name:this.name,pin:this.pin})); this.view="game"; this.render(); }
-      return;
+      localStorage.setItem("mafiaMe:"+this.id, JSON.stringify({token:this.token,name:this.name,pin:this.pin}));
+      this.view="game"; this.render(); return;
     }
     if(m.t==="you"){ if(this.me && m.v<this.me.v) return; this.me=m; if(this.view==="game") this.render(); }
   },
@@ -980,35 +950,57 @@ function route(){
   renderLanding(active);
 }
 
+const setup = { names:[], mins:DEFAULT_TALK_MIN, reveal:true };
 function renderLanding(activeHost){
   App.mode="landing"; body.dataset.phase="lobby"; body.style.setProperty("--lamp","var(--amber)");
-  screen.innerHTML=`<div class="stack center fade" style="margin:auto 0">
-    <div class="eyebrow">أهلاً في</div>
-    <div class="brand disp">المدينة</div>
-    <div class="lead">لعبة المافيا — دكتور، محقّق، ومواطنون… ومافيا تختبئ بينهم.<br>أنشئ غرفة، العب مع أصحابك، وأنت الحكم.</div>
-    <div class="card stack" style="width:100%;text-align:right">
-      ${activeHost?`<button class="ghost full" id="resumeBtn">استئناف غرفتي السابقة</button><hr>`:""}
-      <div><label class="fld">اسمك (ستلعب أيضاً)</label><input id="an" maxlength="18" placeholder="مثال: كيم"></div>
+  const chips=setup.names.map((nm,i)=>`<div class="sus" style="display:flex;align-items:center;gap:8px;text-align:start">
+      <div style="flex:1"><div class="nm">${esc(nm)}</div></div>
+      <button class="del" data-rm="${i}" title="حذف">✕</button></div>`).join("")
+    || `<div class="muted sm" style="grid-column:1/-1;text-align:center;padding:14px">أضف أسماء أصحابك…</div>`;
+  screen.innerHTML=`<div class="stack fade" style="margin:auto 0">
+    <div class="center stack" style="gap:6px"><div class="eyebrow">أهلاً في</div><div class="brand disp">المدينة</div>
+      <div class="lead">أنت الحكم: أضف أسماء اللاعبين، أرسل الرابط، وكل واحد يدخل على اسمه برمز سرّي.</div></div>
+    ${activeHost?`<button class="ghost full" id="resumeBtn">استئناف غرفتي السابقة</button>`:""}
+
+    <div class="card stack">
+      <div><label class="fld">اسمك (الحكم — تلعب معهم)</label><input id="an" maxlength="18" placeholder="مثال: كيم" value="${esc(setup.host||"")}"></div>
+    </div>
+
+    <div class="card stack">
+      <label class="fld">أسماء اللاعبين</label>
+      <div class="row"><input class="grow" id="pn" maxlength="18" placeholder="اكتب اسم لاعب ثم أضف"><button class="btn" id="addP">إضافة</button></div>
+      <div class="grid">${chips}</div>
+      <div class="sm muted">المجموع (معك): ${setup.names.length+1} — تحتاج 6 على الأقل للعب.</div>
+    </div>
+
+    <div class="card stack">
       <div class="switch"><div class="lbl">مدّة النقاش<small>وقت الكلام قبل التصويت</small></div>
-        <div class="num"><button type="button" id="mminus">−</button><b id="mval">${DEFAULT_TALK_MIN}</b><span>دقيقة</span><button type="button" id="mplus">+</button></div></div>
+        <div class="num"><button type="button" id="mminus">−</button><b id="mval">${setup.mins}</b><span>دقيقة</span><button type="button" id="mplus">+</button></div></div>
+      <hr>
       <div class="switch"><div class="lbl">إظهار ورقة من يخرج<small>كشف وظيفة المقتول/المطرود</small></div>
-        <div class="tgl on" id="rtgl"></div></div>
-      <div class="err" id="herr"></div>
-      <button class="btn big full" id="hostBtn">إنشاء غرفة جديدة</button>
+        <div class="tgl ${setup.reveal?"on":""}" id="rtgl"></div></div>
     </div>
-    <div class="seg" style="width:100%">
-      <div class="chip"><b>6–10</b><span>لاعبين</span></div>
-      <div class="chip"><b>2–3</b><span>مافيا</span></div>
-      <div class="chip"><b>1+1</b><span>دكتور ومحقّق</span></div>
-    </div>
+
+    <div class="err" id="herr"></div>
+    <button class="btn big full" id="hostBtn">إنشاء الغرفة وإرسال الرابط</button>
     <footer>عندك رابط من صديق؟ افتحه مباشرة للدخول كلاعب.</footer>
   </div>`;
-  let mins=DEFAULT_TALK_MIN, reveal=true;
-  $("#mminus").onclick=()=>{ mins=Math.max(1,mins-1); $("#mval").textContent=mins; };
-  $("#mplus").onclick =()=>{ mins=Math.min(10,mins+1); $("#mval").textContent=mins; };
-  $("#rtgl").onclick =()=>{ reveal=!reveal; $("#rtgl").classList.toggle("on",reveal); };
-  $("#hostBtn").onclick=()=>{ const nm=$("#an").value.trim(); if(!nm){ $("#herr").textContent="اكتب اسمك"; return; }
-    App.mode="host"; Host.create({name:nm.slice(0,18), mins, reveal}); };
+
+  const addName=()=>{ const inp=$("#pn"); const nm=(inp.value||"").trim().slice(0,18);
+    if(!nm){ return; }
+    if(nm===($("#an").value||"").trim()||setup.names.includes(nm)){ toast("الاسم مكرر"); return; }
+    if(setup.names.length>=9){ toast("الحد 10 (معك)"); return; }
+    setup.host=$("#an").value.trim(); setup.names.push(nm); renderLanding(activeHost);
+    setTimeout(()=>{ const p=$("#pn"); if(p) p.focus(); },0);
+  };
+  $("#addP").onclick=addName;
+  $("#pn").onkeydown=e=>{ if(e.key==="Enter") addName(); };
+  screen.querySelectorAll("[data-rm]").forEach(el=>el.onclick=()=>{ setup.host=$("#an").value.trim(); setup.names.splice(+el.dataset.rm,1); renderLanding(activeHost); });
+  $("#mminus").onclick=()=>{ setup.mins=Math.max(1,setup.mins-1); $("#mval").textContent=setup.mins; };
+  $("#mplus").onclick =()=>{ setup.mins=Math.min(10,setup.mins+1); $("#mval").textContent=setup.mins; };
+  $("#rtgl").onclick =()=>{ setup.reveal=!setup.reveal; $("#rtgl").classList.toggle("on",setup.reveal); };
+  $("#hostBtn").onclick=()=>{ const nm=$("#an").value.trim(); if(!nm){ $("#herr").textContent="اكتب اسمك أولاً"; return; }
+    App.mode="host"; Host.create({name:nm.slice(0,18), names:setup.names.slice(), mins:setup.mins, reveal:setup.reveal}); };
   const rb=$("#resumeBtn"); if(rb) rb.onclick=()=>{ App.mode="host"; if(!Host.resume(activeHost)){ toast("تعذّر الاستئناف"); App.mode="landing"; } };
 }
 
