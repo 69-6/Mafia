@@ -28,7 +28,6 @@
   .mono{font-family:"IBM Plex Mono",monospace; direction:ltr; unicode-bidi:isolate; letter-spacing:1px}
   .disp{font-family:"Rakkas",serif; font-weight:400}
   #app{position:relative; min-height:100dvh; display:flex; flex-direction:column; align-items:center; padding:max(18px,env(safe-area-inset-top)) 16px max(28px,env(safe-area-inset-bottom))}
-  /* المصباح: توهج علوي يتغيّر لونه حسب المرحلة */
   .lamp{position:fixed; inset:0; pointer-events:none; z-index:0;
     background:
       radial-gradient(120% 75% at 50% -12%, color-mix(in srgb, var(--lamp) 26%, transparent), transparent 55%),
@@ -73,13 +72,13 @@
   .btn:disabled{opacity:.4; cursor:not-allowed; filter:grayscale(.4)}
   .ghost{background:transparent; color:var(--bone); border:1px solid var(--line)}
   .ghost:active{background:#ffffff0a}
+  .ghost.full{width:100%}
   .danger{background:var(--crimson); color:#fff}
   .pill{display:inline-flex; align-items:center; gap:7px; background:#ffffff0d; border:1px solid var(--line);
     border-radius:999px; padding:7px 13px; font-size:13px; font-weight:600}
   .dot{width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green)}
   .dot.off{background:var(--dim); box-shadow:none}
 
-  /* لافتة المرحلة */
   .banner{text-align:center; padding:6px 0 4px}
   .banner .ph{font-family:"Rakkas",serif; font-size:clamp(34px,9vw,46px); color:var(--white); line-height:1}
   .banner .sub{color:var(--ash); margin-top:8px; font-size:14px; min-height:20px}
@@ -88,7 +87,6 @@
   .timer b{font-family:"IBM Plex Mono",monospace; font-size:22px; color:var(--lamp)}
   .timer span{font-size:12px; color:var(--dim)}
 
-  /* شبكة المشتبهين */
   .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px}
   .sus{position:relative; background:#0e1019; border:1px solid var(--line); border-radius:14px; padding:14px 12px;
     text-align:center; transition:border .15s, background .15s, transform .08s; cursor:default; overflow:hidden}
@@ -97,14 +95,15 @@
   .sus.dead{opacity:.55}
   .sus.dead .nm{text-decoration:line-through; text-decoration-color:var(--crimson)}
   .sus.sel{border-color:var(--lamp); background:color-mix(in srgb,var(--lamp) 12%,#0e1019); transform:translateY(-2px)}
+  .sus.me{border-color:color-mix(in srgb,var(--lamp) 50%,var(--line))}
   .sus.clk{cursor:pointer}
   .sus.clk:active{transform:scale(.97)}
   .sus .tag{position:absolute; top:7px; inset-inline-start:7px; font-size:10px; letter-spacing:1px; padding:2px 7px; border-radius:999px; font-weight:700}
   .sus .votes{position:absolute; bottom:7px; inset-inline-end:9px; font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--lamp)}
   .tag.mafia{background:var(--crimson-deep); color:#ffd9df}
   .tag.town{background:#10342a; color:#bdf3da}
+  .tag.host{background:#2a2350; color:#d8d0ff}
 
-  /* بطاقة الدور */
   .role-wrap{perspective:1200px; display:flex; justify-content:center; margin:8px 0}
   .role-card{width:230px; height:300px; position:relative; transform-style:preserve-3d; transition:transform 1s cubic-bezier(.2,.8,.2,1)}
   .role-card.flip{transform:rotateY(180deg)}
@@ -122,6 +121,8 @@
   .role-doctor .rl{color:var(--green)}
   .role-detective .rl{color:var(--cyan)}
   .role-citizen .rl{color:var(--bone)}
+  .role-hidden{border-style:dashed}
+  .role-hidden .rl{color:var(--ash)}
 
   .feed{display:flex; flex-direction:column; gap:8px; max-height:230px; overflow:auto}
   .ev{font-size:13px; color:var(--ash); border-inline-start:2px solid var(--line); padding:4px 12px}
@@ -141,6 +142,30 @@
   .chip{flex:1; min-width:90px; text-align:center; background:#0d0f17; border:1px solid var(--line); border-radius:10px; padding:9px}
   .chip b{display:block; font-family:"IBM Plex Mono",monospace; font-size:20px; color:var(--lamp)}
   .chip span{font-size:11px; color:var(--dim)}
+
+  /* مفتاح تبديل */
+  .switch{display:flex; align-items:center; justify-content:space-between; gap:12px}
+  .switch .lbl{font-size:14px; font-weight:600}
+  .switch .lbl small{display:block; font-size:11.5px; color:var(--dim); font-weight:400; margin-top:2px}
+  .tgl{flex:none; width:54px; height:30px; border-radius:999px; background:#0d0f17; border:1px solid var(--line);
+    position:relative; cursor:pointer; transition:background .2s,border .2s}
+  .tgl.on{background:color-mix(in srgb,var(--green) 35%,#0d0f17); border-color:var(--green)}
+  .tgl::after{content:""; position:absolute; top:3px; inset-inline-start:3px; width:22px; height:22px; border-radius:50%;
+    background:var(--dim); transition:inset-inline-start .2s,background .2s}
+  .tgl.on::after{inset-inline-start:27px; background:var(--green)}
+
+  /* عدّاد الدقائق */
+  .num{display:flex; align-items:center; gap:12px}
+  .num button{width:46px; height:46px; padding:0; font-size:24px; background:#0d0f17; color:var(--bone); border:1px solid var(--line)}
+  .num b{font-family:"IBM Plex Mono",monospace; font-size:26px; min-width:54px; text-align:center; color:var(--lamp)}
+  .num span{font-size:12px; color:var(--dim)}
+
+  .lockchip{display:flex; align-items:center; justify-content:center; gap:10px; font-weight:700; font-size:19px;
+    padding:16px; border:1px solid var(--lamp); border-radius:14px; background:color-mix(in srgb,var(--lamp) 10%,#0d0f17)}
+
+  .htools{position:sticky; bottom:0; display:flex; gap:8px; margin-top:16px; padding-top:12px;
+    border-top:1px solid var(--line)}
+  .htools button{flex:1; font-size:13px; padding:11px}
 
   hr{border:none; border-top:1px solid var(--line); margin:4px 0}
   a.lnk{color:var(--lamp); text-decoration:none}
@@ -167,678 +192,65 @@
 "use strict";
 /* =========================================================================
    المدينة — لعبة المافيا
-   • موقع واحد: نفس الملف يعمل كصفحة هوست أو لاعب حسب الرابط.
+   • موقع واحد: نفس الملف يعمل كصفحة حكم (أدمن) أو لاعب حسب الرابط.
    • المزامنة عبر ntfy.sh (نشر/اشتراك مجاني بلا حساب) — نفس فكرة الامبوستر.
-   • الهوست هو "البوت/الحكم": يحفظ الحالة ويدير الجولات والمؤقتات ويبثّها.
+   • الحكم (الأدمن) يدير اللعبة ويلعب أيضاً: لا يرى أدوار غيره.
+   • لكل لاعب كلمة مرور تحمي اسمه من غيره.
    ========================================================================= */
 
-/* ---------- إعدادات قابلة للتعديل ---------- */
 const NTFY = "https://ntfy.sh";
-const SECONDS = { // مدد كل مرحلة (ثوانٍ)
-  reveal: 9, doctor: 30, mafia: 35, detective: 30,
-  nightResult: 7, talk: 100, vote: 40, dayResult: 9
-};
+const SECONDS = { reveal:9, doctor:30, mafia:35, detective:30, nightResult:7, vote:45, dayResult:9 };
+const DEFAULT_TALK_MIN = 2;            // دقائق النقاش الافتراضية
 const ALPH = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
 /* ---------- أدوات ---------- */
 const $ = s => document.querySelector(s);
 const screen = $("#screen");
 const body = document.body;
-const rid = (n=6)=>Array.from({length:n},()=>ALPH[Math.floor(Math.random()*ALPH.length)]).join("");
+const rid = (n=8)=>Array.from({length:n},()=>ALPH[Math.floor(Math.random()*ALPH.length)]).join("");
 const esc = s => (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const now = ()=>Date.now();
 let toastT;
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
 
-/* نشر رسالة JSON على موضوع ntfy (مع محاولة إعادة بسيطة) */
 async function pub(topic, obj){
-  const body = JSON.stringify(obj);
+  const data = JSON.stringify(obj);
   for(let i=0;i<2;i++){
-    try{
-      const r = await fetch(`${NTFY}/${topic}`, {method:"POST", body});
-      if(r.ok) return true;
-    }catch(e){}
+    try{ const r = await fetch(`${NTFY}/${topic}`, {method:"POST", body:data}); if(r.ok) return true; }catch(e){}
     await new Promise(r=>setTimeout(r,400));
   }
   return false;
 }
-/* اشتراك عبر SSE مع كشف التكرار وإعادة الاتصال التلقائي من EventSource */
 function sub(topic, onMsg, onOpen){
-  const seen = new Set();
-  let es;
-  const open = ()=>{
-    es = new EventSource(`${NTFY}/${topic}/sse?since=20m`);
-    es.onmessage = e=>{
-      let env; try{ env = JSON.parse(e.data); }catch{ return; }
+  const seen=new Set(); let es;
+  const open=()=>{
+    es=new EventSource(`${NTFY}/${topic}/sse?since=20m`);
+    es.onmessage=e=>{
+      let env; try{ env=JSON.parse(e.data); }catch{ return; }
       if(env.event && env.event!=="message") return;
       if(!env.message) return;
       if(env.id){ if(seen.has(env.id)) return; seen.add(env.id); }
-      let payload; try{ payload = JSON.parse(env.message); }catch{ return; }
+      let payload; try{ payload=JSON.parse(env.message); }catch{ return; }
       onMsg(payload);
     };
-    es.onopen = ()=>{ if(onOpen) onOpen(); };
-    es.onerror = ()=>{ /* EventSource سيعيد المحاولة تلقائياً */ };
+    es.onopen=()=>{ if(onOpen) onOpen(); };
+    es.onerror=()=>{};
   };
   open();
   return { close:()=>{ try{es.close();}catch{} } };
 }
 
-/* إبقاء الشاشة مضاءة للهوست (مهم: لو قفل جهاز الهوست تتوقف اللعبة) */
 let wakeLock=null;
 async function keepAwake(){
-  try{ if("wakeLock" in navigator){ wakeLock = await navigator.wakeLock.request("screen");
+  try{ if("wakeLock" in navigator){ wakeLock=await navigator.wakeLock.request("screen");
     document.addEventListener("visibilitychange", async()=>{ if(document.visibilityState==="visible"){ try{wakeLock=await navigator.wakeLock.request("screen");}catch{} } });
   }}catch{}
 }
 
-/* ---------- توليد الروابط/المواضيع ---------- */
 const baseURL = ()=> location.origin + location.pathname;
 const topics = id => ({ pub:`mafia-${id}-pub`, inbox:`mafia-${id}-inbox`, pv:t=>`mafia-${id}-pv-${t}` });
 
-/* ===========================================================================
-   الهوست (الحكم/البوت)
-   =========================================================================== */
-const Host = {
-  S:null, T:null, ticking:false, resolving:false,
-  topic:null,
-
-  mafiaCount(n){ return n<=7 ? 2 : 3; },
-
-  create(pin){
-    const id = rid(8);
-    this.S = {
-      id, pin, v:1, phase:"lobby", round:0,
-      players:[],                 // {token,name,role,alive,seen}
-      night:null, day:null,
-      dead:[], feed:[], winner:null,
-      timerEnds:null, timerLabel:"",
-    };
-    localStorage.setItem("mafiaActiveHost", id);
-    this.save(); this.bind(); keepAwake();
-    Player.stop();
-    this.render();
-  },
-  resume(id){
-    const raw = localStorage.getItem("mafiaHost:"+id);
-    if(!raw) return false;
-    try{ this.S = JSON.parse(raw); }catch{ return false; }
-    this.bind(); keepAwake(); this.broadcast(); this.render();
-    return true;
-  },
-  save(){ if(this.S) localStorage.setItem("mafiaHost:"+this.S.id, JSON.stringify(this.S)); },
-
-  bind(){
-    this.topic = topics(this.S.id);
-    if(this._sub) this._sub.close();
-    this._sub = sub(this.topic.inbox, m=>this.onInbox(m));
-    if(!this.ticking){ this.ticking=true; setInterval(()=>this.tick(),250); }
-  },
-
-  alive(){ return this.S.players.filter(p=>p.alive); },
-  aliveRole(r){ return this.alive().filter(p=>p.role===r); },
-  byToken(t){ return this.S.players.find(p=>p.token===t); },
-  name(t){ const p=this.byToken(t); return p?p.name:"—"; },
-
-  /* استقبال رسائل اللاعبين */
-  onInbox(m){
-    if(!m||!m.t) return;
-    const S=this.S;
-    if(m.t==="join"){
-      const known = m.token && this.byToken(m.token);
-      if(known){ this.pushPrivate(known); this.broadcast(); return; } // إعادة دخول
-      if(S.phase!=="lobby"){ this.nack(m.token,"اللعبة بدأت بالفعل."); return; }
-      if(S.players.length>=10){ this.nack(m.token,"الغرفة ممتلئة (10 لاعبين)."); return; }
-      if(String(m.pin)!==String(S.pin)){ this.nack(m.token,"الرمز غير صحيح."); return; }
-      const nm=(m.name||"").trim().slice(0,18);
-      if(!nm){ this.nack(m.token,"اكتب اسمك."); return; }
-      if(S.players.some(p=>p.name===nm)){ this.nack(m.token,"الاسم مستخدم، اختر غيره."); return; }
-      S.players.push({token:m.token, name:nm, role:null, alive:true, seen:now()});
-      this.bumpFeed(`انضمّ ${nm} إلى الغرفة`);
-      this.save(); this.broadcast();
-      const p=this.byToken(m.token); this.pushPrivate(p);
-      return;
-    }
-    if(m.t==="ping"){ const p=this.byToken(m.token); if(p) p.seen=now(); return; }
-    if(m.t==="resync"){ const p=this.byToken(m.token); if(p) p.seen=now(); this.broadcast(); if(p) this.pushPrivate(p); return; }
-    if(m.t==="act"){ this.onAct(m); return; }
-  },
-
-  onAct(m){
-    const S=this.S, p=this.byToken(m.token);
-    if(!p||!p.alive) return;
-    p.seen=now();
-    if(m.phase!==S.phase) return; // رفض الأفعال القديمة بعد إعادة التحميل
-    const N=S.night, D=S.day;
-    if(S.phase==="night_doctor" && p.role==="doctor"){ N.protect=m.target||null; this.afterDoctor(); }
-    else if(S.phase==="night_mafia" && p.role==="mafia"){ N.mafiaVotes[p.token]=m.target||null; this.afterMafiaVote(); }
-    else if(S.phase==="night_detective" && p.role==="detective"){ N.detTarget=m.target||null; this.afterDetective(); }
-    else if(S.phase==="day_vote" && p.alive){ D.votes[p.token]= (m.action==="skipvote"? "SKIP" : (m.target||null)); this.afterVote(); }
-    this.save();
-  },
-
-  nack(token,msg){ if(token) pub(this.topic.pv(token), {t:"nack", v:this.S.v, msg}); },
-  bumpFeed(s){ this.S.feed.push(s); if(this.S.feed.length>40) this.S.feed.shift(); },
-
-  /* ============ بدء اللعبة وتوزيع الأدوار ============ */
-  start(){
-    const S=this.S, n=S.players.length;
-    if(n<6||n>10){ toast("عدد اللاعبين يجب أن يكون من 6 إلى 10"); return; }
-    const mafia=this.mafiaCount(n);
-    const roles=[]; for(let i=0;i<mafia;i++)roles.push("mafia"); roles.push("doctor","detective");
-    while(roles.length<n) roles.push("citizen");
-    // خلط
-    for(let i=roles.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [roles[i],roles[j]]=[roles[j],roles[i]]; }
-    const order=[...S.players]; for(let i=order.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
-    order.forEach((p,i)=>{ p.role=roles[i]; p.alive=true; });
-    S.round=1; S.dead=[]; S.winner=null; S.feed=[];
-    this.bumpFeed(`بدأت اللعبة — ${n} لاعبين، ${mafia} مافيا`);
-    S.detectiveNotes=[];
-    this.setPhase("reveal", SECONDS.reveal);
-    this.save(); this.broadcast(); this.pushAllPrivate();
-  },
-
-  setPhase(p, secs, label){
-    this.S.phase=p; this.S.timerEnds = secs? now()+secs*1000 : null; this.S.timerLabel=label||"";
-    this.resolving=false;
-  },
-
-  /* ============ مراحل الليل ============ */
-  beginNight(){
-    this.S.night={ protect:null, mafiaVotes:{}, mafiaTarget:null, detTarget:null, detResult:null };
-    this.beginDoctor();
-  },
-  beginDoctor(){
-    if(this.aliveRole("doctor").length===0){ return this.beginMafia(); }
-    this.setPhase("night_doctor", SECONDS.doctor);
-    this.broadcast(); this.pushSpecials();
-  },
-  afterDoctor(){ this.beginMafia(); },
-  beginMafia(){
-    this.setPhase("night_mafia", SECONDS.mafia);
-    this.broadcast(); this.pushSpecials();
-  },
-  afterMafiaVote(){
-    const N=this.S.night, mafias=this.aliveRole("mafia");
-    const voted = mafias.filter(p=>N.mafiaVotes[p.token]!==undefined).length;
-    this.pushList(mafias); // تحديث لوحة المافيا الحية
-    if(voted>=mafias.length) this.beginDetective();
-  },
-  tallyMafia(){
-    const N=this.S.night; const counts={};
-    Object.values(N.mafiaVotes).forEach(t=>{ if(t) counts[t]=(counts[t]||0)+1; });
-    let best=null,bc=0,ties=[];
-    for(const t in counts){ if(counts[t]>bc){bc=counts[t];best=t;ties=[t];} else if(counts[t]===bc){ties.push(t);} }
-    if(ties.length>1) best=ties[Math.floor(Math.random()*ties.length)];
-    N.mafiaTarget=best;
-  },
-  beginDetective(){
-    this.tallyMafia();
-    if(this.aliveRole("detective").length===0){ return this.resolveNight(); }
-    this.setPhase("night_detective", SECONDS.detective);
-    this.broadcast(); this.pushSpecials();
-  },
-  afterDetective(){
-    const N=this.S.night;
-    if(N.detTarget){
-      const tp=this.byToken(N.detTarget);
-      N.detResult={ name:tp?tp.name:"—", isMafia: tp? tp.role==="mafia":false };
-      const det=this.aliveRole("detective")[0];
-      if(det){ this.S.detectiveNotes=this.S.detectiveNotes||[]; this.S.detectiveNotes.push(N.detResult); }
-    }
-    this.resolveNight();
-  },
-  resolveNight(){
-    const S=this.S, N=S.night;
-    if(N.mafiaTarget==null) this.tallyMafia(); // لو انتهى الوقت قبل الفرز
-    let killedName=null, killedRole=null, saved=false;
-    if(N.mafiaTarget){
-      if(N.mafiaTarget===N.protect){ saved=true; }
-      else{
-        const v=this.byToken(N.mafiaTarget);
-        if(v && v.alive){ v.alive=false; killedName=v.name; killedRole=v.role; S.dead.push({name:v.name, role:v.role}); }
-      }
-    }
-    S.lastNight = killedName? {name:killedName, role:killedRole} : (saved? {saved:true} : null);
-    if(killedName) this.bumpFeed(`الليلة ${S.round}: قُتل ${killedName} — كان ${roleAr(killedRole)}`);
-    else this.bumpFeed(`الليلة ${S.round}: لم يمت أحد`);
-    if(this.checkWin()) return;
-    this.setPhase("night_result", SECONDS.nightResult);
-    this.broadcast(); this.pushAllPrivate();
-  },
-
-  /* ============ النهار والتصويت ============ */
-  beginDay(){
-    this.S.day={ votes:{}, expelled:null };
-    this.setPhase("day_talk", SECONDS.talk);
-    this.broadcast(); this.pushAllPrivate();
-  },
-  beginVote(){
-    if(this.S.phase!=="day_talk") return;
-    this.S.day.votes={};
-    this.setPhase("day_vote", SECONDS.vote);
-    this.broadcast(); this.pushAllPrivate();
-  },
-  afterVote(){
-    const alive=this.alive().length, voted=Object.keys(this.S.day.votes).length;
-    this.broadcast();
-    if(voted>=alive) this.resolveDay();
-  },
-  resolveDay(){
-    const S=this.S, D=S.day, counts={};
-    Object.values(D.votes).forEach(t=>{ if(t&&t!=="SKIP") counts[t]=(counts[t]||0)+1; });
-    let best=null,bc=0,ties=[];
-    for(const t in counts){ if(counts[t]>bc){bc=counts[t];best=t;ties=[t];} else if(counts[t]===bc){ties.push(t);} }
-    if(bc===0 || ties.length>1){ D.expelled=null; this.bumpFeed(`النهار ${S.round}: تعادل/امتناع — لم يُطرد أحد`); }
-    else{
-      const p=this.byToken(best); if(p){ p.alive=false; D.expelled={name:p.name, role:p.role}; S.dead.push({name:p.name, role:p.role});
-        this.bumpFeed(`النهار ${S.round}: طُرد ${p.name} — كان ${roleAr(p.role)}`); }
-    }
-    if(this.checkWin()) return;
-    this.setPhase("day_result", SECONDS.dayResult);
-    this.broadcast(); this.pushAllPrivate();
-  },
-
-  nextRound(){ this.S.round++; this.beginNight(); },
-
-  checkWin(){
-    const aliveMafia=this.aliveRole("mafia").length;
-    const aliveTown=this.alive().length-aliveMafia;
-    let w=null;
-    if(aliveMafia===0) w="town";
-    else if(aliveMafia>=aliveTown) w="mafia";
-    if(w){ this.S.winner=w; this.bumpFeed(w==="town"?"فاز أهل المدينة! 🏙️":"فازت المافيا! 🔪");
-      this.setPhase("over",null); this.broadcast(); this.pushAllPrivate(); this.save(); return true; }
-    return false;
-  },
-
-  /* ============ المؤقّت (قلب البوت) ============ */
-  tick(){
-    const S=this.S; if(!S) return;
-    if(S.timerEnds && now()>=S.timerEnds && !this.resolving){
-      this.resolving=true;
-      const p=S.phase;
-      if(p==="reveal") this.beginNight();
-      else if(p==="night_doctor") this.beginMafia();
-      else if(p==="night_mafia") this.beginDetective();
-      else if(p==="night_detective") this.resolveNight();
-      else if(p==="night_result") this.beginDay();
-      else if(p==="day_talk") this.beginVote();
-      else if(p==="day_vote") this.resolveDay();
-      else if(p==="day_result") this.nextRound();
-      this.save();
-    }
-    this.renderTimer();
-  },
-
-  /* ============ البث ============ */
-  publicState(){
-    const S=this.S;
-    const phase = mapPublic(S.phase);
-    const banner = bannerFor(S, phase);
-    const pl = S.players.map(p=>({id:p.token, name:p.name, alive:p.alive, seen:(now()-p.seen)<25000}));
-    let tally=null;
-    if(S.phase==="day_vote" && S.day){
-      tally={}; Object.values(S.day.votes).forEach(t=>{ if(t&&t!=="SKIP") tally[t]=(tally[t]||0)+1; });
-      tally.__voted=Object.keys(S.day.votes).length;
-    }
-    let reveal=null;
-    if(S.phase==="over") reveal=S.players.map(p=>({name:p.name, role:p.role, alive:p.alive}));
-    return {
-      t:"state", v:++S.v, id:S.id, phase, round:S.round,
-      players:pl, dead:S.dead, feed:S.feed.slice(-12),
-      title:banner.title, sub:banner.sub, lamp:banner.lamp,
-      timerEnds:S.timerEnds, timerLabel:S.timerLabel,
-      tally, reveal, winner:S.winner,
-      counts:{ alive:this.alive().length, mafia:this.aliveRole("mafia").length }
-    };
-  },
-  broadcast(){ this.save(); const st=this.publicState(); pub(this.topic.pub, st); this.render(st); },
-
-  pushAllPrivate(){ this.S.players.forEach(p=>this.pushPrivate(p)); },
-  pushSpecials(){ this.S.players.forEach(p=>{ if(p.role==="mafia"||p.role==="doctor"||p.role==="detective") this.pushPrivate(p); }); },
-  pushList(arr){ (arr||[]).forEach(p=>{ if(p) this.pushPrivate(p); }); },
-  pushPrivate(p){
-    const S=this.S; const out={ t:"you", v:S.v, role:p.role, alive:p.alive, prompt:null, board:null, notes:null, result:null };
-    if(p.role==="mafia"){
-      out.teammates = S.players.filter(x=>x.role==="mafia"&&x.token!==p.token).map(x=>({name:x.name,alive:x.alive}));
-    }
-    if(p.role==="detective" && S.detectiveNotes) out.notes=S.detectiveNotes;
-    if(p.alive){
-      if(S.phase==="night_doctor" && p.role==="doctor"){
-        out.prompt={ kind:"protect", ends:S.timerEnds, done:(S.night&&S.night.protect!==null),
-          cand:this.alive().map(x=>({id:x.token,name:x.name})) };
-      }
-      if(S.phase==="night_mafia" && p.role==="mafia"){
-        const N=S.night;
-        out.prompt={ kind:"kill", ends:S.timerEnds, done:(N&&N.mafiaVotes[p.token]!==undefined),
-          cand:this.alive().filter(x=>x.role!=="mafia").map(x=>({id:x.token,name:x.name})) };
-        out.board = this.aliveRole("mafia").map(x=>({name:x.name, target: N&&N.mafiaVotes[x.token]? this.name(N.mafiaVotes[x.token]) : null}));
-      }
-      if(S.phase==="night_detective" && p.role==="detective"){
-        out.prompt={ kind:"investigate", ends:S.timerEnds, done:(S.night&&S.night.detTarget!==null),
-          cand:this.alive().filter(x=>x.token!==p.token).map(x=>({id:x.token,name:x.name})) };
-      }
-      if(S.phase==="day_vote"){
-        out.prompt={ kind:"vote", ends:S.timerEnds, done:(S.day&&S.day.votes[p.token]!==undefined),
-          cand:this.alive().filter(x=>x.token!==p.token).map(x=>({id:x.token,name:x.name})) };
-      }
-    }
-    pub(this.topic.pv(p.token), out);
-  },
-
-  /* ============ واجهة الهوست (شاشة الحكم) ============ */
-  render(st){
-    if(App.mode!=="host"||!this.S) return;
-    const S=this.S;
-    if(S.phase==="lobby"){ this.renderLobby(); return; }
-    const link = baseURL()+"#j="+S.id;
-    const ph = mapPublic(S.phase);
-    const rows = S.players.map(p=>{
-      const cls = p.role||"citizen";
-      return `<div class="sus ${p.alive?"":"dead"}">
-        <span class="tag ${p.role==="mafia"?"mafia":"town"}">${roleAr(p.role)}</span>
-        <div class="nm">${esc(p.name)}</div>
-        <div class="st">${p.alive?"حيّ":"خارج اللعبة"}</div></div>`;
-    }).join("");
-    const b = bannerFor(S, ph);
-    let controls = `<button class="ghost" data-h="skip">تخطّي المرحلة ⏭</button>`;
-    if(S.phase==="day_talk") controls = `<button class="btn" data-h="vote">ابدأ التصويت 🗳</button>`+controls;
-    if(S.phase==="over") controls = `<button class="btn" data-h="again">لعبة جديدة بنفس اللاعبين 🔄</button>`;
-    screen.innerHTML = `
-      <div class="stack wide fade">
-        <div class="row spread"><span class="pill"><span class="dot"></span> شاشة الحكم</span>
-          <span class="pill mono">${S.id.slice(0,4)}</span></div>
-        <div class="banner"><div class="ph">${b.title}</div><div class="sub">${b.sub||""}</div>
-          ${S.timerEnds?`<div class="timer"><b id="tmr">--</b><span>${esc(S.timerLabel||"")}</span></div>`:""}</div>
-        <div class="seg"><div class="chip"><b>${this.alive().length}</b><span>أحياء</span></div>
-          <div class="chip"><b>${this.aliveRole("mafia").length}</b><span>مافيا</span></div>
-          <div class="chip"><b>${S.round}</b><span>الجولة</span></div></div>
-        <div class="grid">${rows}</div>
-        <div class="row">${controls}</div>
-        <div class="card stack"><div class="eyebrow">السجلّ</div><div class="feed">${S.feed.slice().reverse().map(f=>`<div class="ev">${esc(f)}</div>`).join("")||'<div class="muted sm">—</div>'}</div></div>
-        <button class="ghost" data-h="end">إنهاء الغرفة</button>
-      </div>`;
-    this.renderTimer();
-  },
-  renderLobby(){
-    const S=this.S; const link=baseURL()+"#j="+S.id;
-    const list = S.players.map(p=>`<div class="sus"><div class="nm">${esc(p.name)}</div><div class="st">${(now()-p.seen)<25000?"متّصل":"…"}</div></div>`).join("")
-      || `<div class="muted sm" style="grid-column:1/-1;text-align:center;padding:18px">بانتظار دخول اللاعبين…</div>`;
-    const n=S.players.length, ready=n>=6&&n<=10;
-    screen.innerHTML=`
-      <div class="stack fade">
-        <div class="row spread"><span class="eyebrow">غرفة جديدة</span><span class="pill"><span class="dot"></span> أنت الحكم</span></div>
-        <div class="card stack">
-          <div class="sm muted">شارك الرابط مع أصدقائك في الدسكورد، وأعطهم الرمز للدخول.</div>
-          <label class="fld">رابط الدخول</label>
-          <div class="row"><input class="mono grow" id="lnk" readonly value="${esc(link)}"><button class="btn" data-h="copylink">نسخ</button></div>
-          <div class="row spread">
-            <div><label class="fld">رمز الدخول (PIN)</label><div class="mono" style="font-size:28px;color:var(--lamp)">${esc(S.pin)}</div></div>
-            <button class="ghost" data-h="copypin">نسخ الرمز</button>
-          </div>
-        </div>
-        <div class="row spread"><span class="pill">${n} / 10 لاعب</span><span class="sm muted">الحد الأدنى 6</span></div>
-        <div class="grid">${list}</div>
-        <button class="btn big full" data-h="start" ${ready?"":"disabled"}>ابدأ اللعبة (${n})</button>
-        <button class="ghost" data-h="end">إلغاء الغرفة</button>
-        <footer>إبقِ هذه الصفحة مفتوحة طوال اللعبة — جهازك هو من يدير اللعبة.</footer>
-      </div>`;
-  },
-  renderTimer(){
-    const el=$("#tmr"); if(!el||!this.S||!this.S.timerEnds) return;
-    const r=Math.max(0,Math.ceil((this.S.timerEnds-now())/1000));
-    el.textContent=String(r).padStart(2,"0");
-  },
-
-  onClick(h, e){
-    const S=this.S;
-    if(h==="copylink"){ navigator.clipboard?.writeText($("#lnk").value); toast("تم نسخ الرابط"); }
-    else if(h==="copypin"){ navigator.clipboard?.writeText(S.pin); toast("تم نسخ الرمز"); }
-    else if(h==="start"){ this.start(); }
-    else if(h==="vote"){ this.beginVote(); }
-    else if(h==="skip"){ if(S.timerEnds){ S.timerEnds=now(); } else { /* في النهار بلا مؤقّت */ this.beginVote(); } }
-    else if(h==="again"){ this.start(); }
-    else if(h==="end"){ if(confirm("إنهاء الغرفة؟")){ localStorage.removeItem("mafiaActiveHost"); localStorage.removeItem("mafiaHost:"+S.id); location.hash=""; location.reload(); } }
-  },
-  _sub:null,
-};
-
-/* ===========================================================================
-   اللاعب
-   =========================================================================== */
-const Player = {
-  id:null, token:null, name:null, pin:null,
-  pub:null, me:null, _subPub:null, _subPv:null, lastErr:"", flipped:false, acted:false,
-  topic:null, joining:false,
-
-  begin(id){
-    this.id=id; this.topic=topics(id);
-    const saved = localStorage.getItem("mafiaMe:"+id);
-    if(saved){ try{ const m=JSON.parse(saved); this.token=m.token; this.name=m.name; this.connect(); this.resync(); return; }catch{} }
-    this.renderJoin();
-  },
-  stop(){ this._subPub?.close(); this._subPv?.close(); },
-
-  connect(){
-    this._subPub?.close(); this._subPv?.close();
-    this._subPub = sub(this.topic.pub, m=>this.onPub(m));
-    this._subPv  = sub(this.topic.pv(this.token), m=>this.onPv(m), ()=>this.resync());
-    setInterval(()=>{ if(this.token) pub(this.topic.inbox,{t:"ping",token:this.token}); }, 25000);
-  },
-  resync(){ if(this.token) pub(this.topic.inbox,{t:"resync",token:this.token}); },
-
-  submitJoin(){
-    const nm=$("#jn").value.trim(), pn=$("#jp").value.trim();
-    if(!nm){ this.err("اكتب اسمك"); return; }
-    if(!/^\d{4}$/.test(pn)){ this.err("الرمز 4 أرقام"); return; }
-    this.token=rid(8); this.name=nm; this.pin=pn; this.joining=true;
-    this.connect();
-    pub(this.topic.inbox,{t:"join", token:this.token, name:nm, pin:pn});
-    this.err(""); $("#jbtn").disabled=true; $("#jbtn").textContent="جارٍ الدخول…";
-    setTimeout(()=>{ if(this.joining && !this.me){ $("#jbtn").disabled=false; $("#jbtn").textContent="دخول"; this.err("لا يوجد ردّ. تأكد أن الحكم فتح الغرفة وأن الإنترنت يعمل."); } },6000);
-  },
-  err(s){ this.lastErr=s; const e=$("#jerr"); if(e) e.textContent=s; },
-
-  onPub(m){ if(m.t!=="state") return; if(this.pub && m.v<this.pub.v) return; this.pub=m;
-    if(this.joining && !this.me){ const meIn=m.players.find(p=>p.id===this.token); if(meIn){ this.confirmJoin(); } }
-    this.render(); },
-  onPv(m){
-    if(m.t==="nack"){ this.joining=false; localStorage.removeItem("mafiaMe:"+this.id);
-      const b=$("#jbtn"); if(b){ b.disabled=false; b.textContent="دخول"; } this.err(m.msg||"تعذّر الدخول"); return; }
-    if(m.t==="you"){ if(this.me && m.v < this.me.v) return; this.me=m;
-      if(this.joining){ this.confirmJoin(); }
-      this.render(); }
-  },
-  confirmJoin(){ if(!this.joining) return; this.joining=false; localStorage.setItem("mafiaMe:"+this.id, JSON.stringify({token:this.token,name:this.name})); },
-
-  act(action, target){
-    pub(this.topic.inbox,{t:"act", token:this.token, phase:hostPhaseFromPublic(this.pub), action, target});
-    this.acted=true; toast("تم الإرسال ✓"); this.render();
-  },
-
-  /* ----- شاشات اللاعب ----- */
-  renderJoin(){
-    body.dataset.phase="lobby";
-    screen.innerHTML=`
-      <div class="stack center fade" style="margin:auto 0">
-        <div class="eyebrow">المدينة</div>
-        <div class="brand disp">المافيا</div>
-        <div class="lead">ادخل باسمك ورمز الغرفة لتبدأ اللعب مع أصدقائك.</div>
-        <div class="card stack" style="width:100%;text-align:right">
-          <div><label class="fld">اسمك في اللعبة</label><input id="jn" maxlength="18" placeholder="مثال: خالد"></div>
-          <div><label class="fld">رمز الدخول (4 أرقام)</label><input id="jp" class="pin" inputmode="numeric" maxlength="4" placeholder="••••"></div>
-          <div class="err" id="jerr">${esc(this.lastErr)}</div>
-          <button class="btn big full" id="jbtn">دخول</button>
-        </div>
-      </div>`;
-    $("#jbtn").onclick=()=>this.submitJoin();
-    $("#jp").oninput=e=>e.target.value=e.target.value.replace(/\D/g,"");
-  },
-
-  render(){
-    if(App.mode!=="player") return;
-    const P=this.pub, me=this.me;
-    if(!P) return;
-    body.dataset.phase = P.phase;
-    body.style.setProperty("--lamp", lampVar(P.lamp));
-    const myAlive = me? me.alive : true;
-    const myRole = me? me.role : null;
-
-    // غرفة الانتظار
-    if(P.phase==="lobby"){
-      const list=P.players.map(p=>`<div class="sus"><div class="nm">${esc(p.name)}</div><div class="st">جاهز</div></div>`).join("");
-      screen.innerHTML=`<div class="stack fade">
-        <div class="row spread"><span class="eyebrow">غرفة الانتظار</span><span class="pill"><span class="dot"></span> ${esc(this.name||"")}</span></div>
-        <div class="banner"><div class="ph">بانتظار البدء</div><div class="sub">${P.players.length} لاعبين في الغرفة</div></div>
-        <div class="grid">${list}</div>
-        <footer>سيبدأ الحكم اللعبة عند اكتمال العدد.</footer></div>`;
-      this.flipped=false; return;
-    }
-
-    // لم يصلنا الدور بعد (إعادة مزامنة)
-    if(P.phase!=="over" && !me){
-      screen.innerHTML=`<div class="stack center fade">
-        <div class="eyebrow">مزامنة…</div>
-        <div class="banner"><div class="ph">جارٍ استلام دورك</div><div class="sub">لحظات من فضلك</div></div></div>`;
-      this.resync(); return;
-    }
-
-    // كشف الأدوار
-    if(P.phase==="reveal"){
-      this.acted=false;
-      const r=myRole||"citizen";
-      screen.innerHTML=`<div class="stack center fade">
-        <div class="eyebrow">دورك السرّي</div>
-        <div class="role-wrap"><div class="role-card role-${r}" id="rc">
-          <div class="face back"><div class="seal">؟</div><div class="sm">انقر للكشف</div></div>
-          <div class="face front role-${r}">
-            <div class="ic">${roleIcon(r)}</div><div class="rl disp">${roleAr(r)}</div>
-            <div class="ds">${roleDesc(r)}</div></div></div></div>
-        ${r==="mafia"&&me.teammates?`<div class="note mafia">شركاؤك: ${me.teammates.map(t=>esc(t.name)).join(" · ")||"—"}</div>`:""}
-        <div class="timer"><b id="tmr">--</b><span>تبدأ الليلة بعد</span></div>
-        <div class="sm muted">احفظ دورك ولا تكشفه لأحد.</div></div>`;
-      const rc=$("#rc"); if(!this.flipped){ rc.onclick=()=>{ rc.classList.add("flip"); this.flipped=true; }; }
-      else rc.classList.add("flip");
-      this.tick(); return;
-    }
-
-    // الليل
-    if(P.phase==="night"){
-      if(!myAlive){ this.deadView("الليل","المدينة نائمة… أنت تراقب من بعيد."); return; }
-      if(me && me.prompt && !me.prompt.done){ this.actionView(me); return; }
-      if(me && me.prompt && me.prompt.done){ this.waitView(me); return; }
-      // مواطن أو دور خامل هذه الليلة
-      let extra="";
-      if(myRole==="mafia" && me.board){ extra=`<div class="note mafia">قرار المافيا: ${me.board.map(b=>`${esc(b.name)}${b.target?" → "+esc(b.target):" …"}`).join(" | ")}</div>`; }
-      if(myRole==="detective" && me.notes&&me.notes.length){ extra=this.detNotes(me.notes); }
-      screen.innerHTML=`<div class="stack center fade">
-        <div class="banner"><div class="ph">حلّ الليل</div><div class="sub">المدينة نائمة… يتحرّك من في الظلام.</div></div>
-        <div style="font-size:54px" class="blink">🌙</div>
-        ${extra}
-        <div class="sm muted">انتظر شروق الصباح.</div></div>`;
-      return;
-    }
-
-    // إعلان (نتيجة ليل أو طرد)
-    if(P.phase==="result"){
-      screen.innerHTML=`<div class="stack center fade">
-        <div class="banner"><div class="ph">${esc(P.title)}</div><div class="sub">${esc(P.sub||"")}</div></div>
-        ${this.lastReveal(P)}
-        <div class="timer"><b id="tmr">--</b><span>الجولة القادمة</span></div></div>`;
-      this.tick(); return;
-    }
-
-    // النهار (نقاش)
-    if(P.phase==="day"){
-      if(!myAlive){ this.deadView("النهار","المدينة تتناقش… أنت تتابع بصمت."); return; }
-      screen.innerHTML=`<div class="stack center fade">
-        <div class="banner"><div class="ph">${esc(P.title)}</div><div class="sub">${esc(P.sub||"")}</div></div>
-        <div style="font-size:54px">🏙️</div>
-        <div class="note">تناقشوا في الدسكورد: من تشكّون فيه؟ سيبدأ التصويت قريباً.</div>
-        ${myRole==="detective"&&me.notes&&me.notes.length?this.detNotes(me.notes):""}
-        <div class="timer"><b id="tmr">--</b><span>وقت النقاش</span></div></div>`;
-      this.tick(); return;
-    }
-
-    // التصويت
-    if(P.phase==="vote"){
-      if(!myAlive){ this.deadView("التصويت","لا يحقّ للخارجين التصويت."); return; }
-      if(me && me.prompt && !me.prompt.done){ this.actionView(me, P.tally); return; }
-      this.waitView(me, "أرسلت صوتك. بانتظار البقية…"); return;
-    }
-
-    // النهاية
-    if(P.phase==="over"){
-      const win=P.winner;
-      body.style.setProperty("--lamp", win==="town"? "var(--green)":"var(--crimson)");
-      const reveal=(P.reveal||[]).map(p=>`<div class="sus ${p.alive?"":"dead"}">
-        <span class="tag ${p.role==="mafia"?"mafia":"town"}">${roleAr(p.role)}</span>
-        <div class="nm">${esc(p.name)}</div><div class="st">${p.alive?"نجا":"خرج"}</div></div>`).join("");
-      screen.innerHTML=`<div class="stack center fade">
-        <div class="eyebrow">انتهت اللعبة</div>
-        <div class="brand disp" style="color:${win==="town"?"var(--green)":"var(--crimson)"}">${win==="town"?"فاز أهل المدينة":"فازت المافيا"}</div>
-        <div class="lead">${win==="town"?"كُشفت المافيا وعادت المدينة آمنة.":"سيطرت المافيا على المدينة."}</div>
-        <div class="grid" style="width:100%">${reveal}</div>
-        <div class="sm muted">بانتظار أن يبدأ الحكم جولة جديدة.</div></div>`;
-      this.flipped=false; return;
-    }
-  },
-
-  actionView(me, tally){
-    const pr=me.prompt; const head=actionHead(pr.kind);
-    const cand=pr.cand.map(c=>{
-      const v = tally && tally[c.id]? `<span class="votes">${tally[c.id]}</span>`:"";
-      return `<div class="sus clk" data-pick="${c.id}"><div class="nm">${esc(c.name)}</div><div class="st">${head.verb}</div>${v}</div>`;
-    }).join("");
-    let extra="";
-    if(me.role==="mafia"&&me.board) extra=`<div class="note mafia">شركاؤك صوّتوا: ${me.board.map(b=>`${esc(b.name)}${b.target?" → "+esc(b.target):" …"}`).join(" | ")}</div>`;
-    if(me.role==="detective"&&me.notes&&me.notes.length) extra=this.detNotes(me.notes);
-    let skip = pr.kind==="vote"? `<button class="ghost full" data-skip="1">امتناع عن التصويت</button>`:"";
-    screen.innerHTML=`<div class="stack fade">
-      <div class="banner"><div class="ph">${head.title}</div><div class="sub">${head.sub}</div>
-        <div class="timer"><b id="tmr">--</b><span>اختر بسرعة</span></div></div>
-      ${extra}
-      <div class="grid">${cand}</div>
-      ${skip}</div>`;
-    screen.querySelectorAll("[data-pick]").forEach(el=>el.onclick=()=>{
-      screen.querySelectorAll(".sus").forEach(s=>s.classList.remove("sel")); el.classList.add("sel");
-      const action = pr.kind==="vote"?"vote":(pr.kind==="protect"?"protect":pr.kind==="kill"?"kill":"investigate");
-      this.act(action, el.dataset.pick);
-    });
-    const sk=screen.querySelector("[data-skip]"); if(sk) sk.onclick=()=>this.act("skipvote",null);
-    this.tick();
-  },
-  waitView(me, msg){
-    let extra="";
-    if(me.role==="detective"&&me.notes&&me.notes.length) extra=this.detNotes(me.notes);
-    if(me.role==="mafia"&&me.board) extra=`<div class="note mafia">قرار المافيا: ${me.board.map(b=>`${esc(b.name)}${b.target?" → "+esc(b.target):" …"}`).join(" | ")}</div>`;
-    screen.innerHTML=`<div class="stack center fade">
-      <div class="banner"><div class="ph">تمّ ✓</div><div class="sub">${esc(msg||"أرسلت اختيارك. بانتظار البقية…")}</div></div>
-      <div style="font-size:48px" class="blink">⏳</div>${extra}
-      <div class="timer"><b id="tmr">--</b><span>تنتهي المرحلة</span></div></div>`;
-    this.tick();
-  },
-  deadView(ph, sub){
-    screen.innerHTML=`<div class="stack center fade">
-      <div class="banner"><div class="ph">${esc(ph)}</div><div class="sub">${esc(sub)}</div></div>
-      <div style="font-size:48px;opacity:.5">⚰️</div>
-      <div class="note">خرجت من اللعبة، لكن تابع حتى النهاية بصمت.</div></div>`;
-  },
-  detNotes(notes){ return `<div class="note cyan"><b>دفتر المحقّق</b><br>${notes.map(n=>`${esc(n.name)} — ${n.isMafia?'<b style="color:#ff8197">مافيا</b>':'بريء'}`).join("<br>")}</div>`; },
-  lastReveal(P){
-    const d=P.dead&&P.dead.length?P.dead[P.dead.length-1]:null;
-    if(!d) return `<div class="note green">مرّت بسلام — لم يُكشف أحد.</div>`;
-    const m=d.role==="mafia";
-    return `<div class="role-wrap"><div class="role-card flip role-${d.role}"><div class="face back"></div>
-      <div class="face front role-${d.role}"><div class="ic">${roleIcon(d.role)}</div>
-      <div class="rl disp">${esc(d.name)}</div><div class="ds">كان <b style="color:${m?'#ff8197':'var(--green)'}">${roleAr(d.role)}</b></div></div></div></div>`;
-  },
-  tick(){ const el=$("#tmr"); if(!el) return; const ends=(this.pub&&this.pub.timerEnds)||(this.me&&this.me.prompt&&this.me.prompt.ends);
-    if(!ends){ el.textContent="--"; return; } const r=Math.max(0,Math.ceil((ends-now())/1000)); el.textContent=String(r).padStart(2,"0"); },
-};
-setInterval(()=>{ if(App.mode==="player") Player.tick(); }, 250);
-
-/* ---------- مساعدات الأدوار/النصوص ---------- */
+/* ---------- نصوص الأدوار ---------- */
 function roleAr(r){ return {mafia:"مافيا",doctor:"دكتور",detective:"محقّق",citizen:"مواطن"}[r]||"—"; }
 function roleIcon(r){ return {mafia:"🔪",doctor:"🩺",detective:"🔍",citizen:"👤"}[r]||"👤"; }
 function roleDesc(r){ return {
@@ -850,7 +262,7 @@ function actionHead(k){ return {
   protect:{title:"الدكتور",sub:"من تحمي هذه الليلة؟",verb:"احمِه"},
   kill:{title:"المافيا",sub:"على من تتفقون لقتله؟",verb:"اقتله"},
   investigate:{title:"المحقّق",sub:"عمّن تسأل هذه الليلة؟",verb:"حقّق فيه"},
-  vote:{title:"التصويت",sub:"من تطرد من المدينة؟",verb:"اطرده"} }[k]; }
+  vote:{title:"التصويت",sub:"من تطردون من المدينة؟",verb:"اطرده"} }[k]; }
 
 function mapPublic(p){
   if(p.startsWith("night")&&p!=="night_result") return "night";
@@ -860,29 +272,23 @@ function mapPublic(p){
   if(p==="reveal") return "reveal";
   return p; // lobby / over
 }
-function hostPhaseFromPublic(P){ // ما الذي يتوقعه الهوست الآن (لتوسيم الفعل)
-  if(!P) return "";
-  // اللاعب لا يعرف الخطوة الدقيقة في الليل؛ نعتمد على نوع الـprompt المرسل إليه
-  const me=Player.me;
-  if(P.phase==="vote") return "day_vote";
-  if(me&&me.prompt){ return {protect:"night_doctor",kill:"night_mafia",investigate:"night_detective",vote:"day_vote"}[me.prompt.kind]||P.phase; }
-  return P.phase;
-}
-function lampVar(name){ return {amber:"var(--amber)",indigo:"#5b6ee0",night:"#3a4790",day:"var(--amber)",crimson:"var(--crimson)",cyan:"var(--cyan)",green:"var(--green)"}[name]||"var(--amber)"; }
+function lampVar(name){ return {amber:"var(--amber)",night:"#3a4790",day:"var(--amber)",crimson:"var(--crimson)",cyan:"var(--cyan)",green:"var(--green)"}[name]||"var(--amber)"; }
 
 function bannerFor(S, ph){
+  const rv = S.revealCards;
   if(ph==="reveal") return {title:"وُزِّعت الأدوار", sub:"اكشف بطاقتك سرّاً", lamp:"amber"};
   if(ph==="night") return {title:"حلّ الليل", sub:"المدينة نائمة…", lamp:"night"};
   if(ph==="day"){ const ln=S.lastNight; let sub="أشرق الصباح على المدينة.";
-    if(ln){ if(ln.saved) sub="مرّت الليلة بسلام — لم يمت أحد."; else sub=`وُجد ${ln.name} مقتولاً — كان ${roleAr(ln.role)}.`; }
+    if(ln){ if(ln.saved) sub="مرّت الليلة بسلام — لم يمت أحد."; else sub = rv? `وُجد ${ln.name} مقتولاً — كان ${roleAr(ln.role)}.` : `وُجد ${ln.name} مقتولاً.`; }
     return {title:`اليوم ${S.round}`, sub, lamp:"day"}; }
-  if(ph==="vote") return {title:"التصويت", sub:"صوّتوا لطرد المشتبه به.", lamp:"crimson"};
+  if(ph==="vote") return {title:"التصويت", sub:"صوّتوا لطرد مشتبه به، أو تخطّوا الجولة.", lamp:"crimson"};
   if(ph==="result"){
     if(S.phase==="night_result"){ const ln=S.lastNight;
       if(!ln||ln.saved) return {title:"صباح هادئ", sub:"لم يمت أحد هذه الليلة.", lamp:"green"};
       return {title:"جريمة ليلية", sub:`قُتل ${ln.name}.`, lamp:"crimson"}; }
     const ex=S.day&&S.day.expelled;
-    if(!ex) return {title:"لا طرد", sub:"تعادل الأصوات — لم يُطرد أحد.", lamp:"amber"};
+    if(!ex) return {title:"لا طرد", sub:"تخطّت المدينة الجولة — لم يُطرد أحد.", lamp:"amber"};
+    if(!rv) return {title:"طُرد من المدينة", sub:`خرج ${ex.name}.`, lamp:"amber"};
     return {title:"طُرد من المدينة", sub:`${ex.name} كان ${roleAr(ex.role)}.`, lamp: ex.role==="mafia"?"green":"crimson"};
   }
   if(ph==="over") return {title:S.winner==="town"?"فازت المدينة":"فازت المافيا", sub:"", lamp:S.winner==="town"?"green":"crimson"};
@@ -890,55 +296,650 @@ function bannerFor(S, ph){
 }
 
 /* ===========================================================================
-   التوجيه: هوست أم لاعب؟
+   واجهة اللعب المشتركة (يستعملها اللاعب والحكم-اللاعب بنفس الكود)
+   ctx = { act(action,target), resync?(), name, isAdmin? }
+   =========================================================================== */
+const UI = {
+  pub:null, me:null, ctx:null, flipped:false,
+
+  show(pub, me, ctx){ this.pub=pub; this.me=me; this.ctx=ctx; this.render(); },
+  clear(){ this.pub=null; this.me=null; this.ctx=null; },
+
+  render(){
+    const P=this.pub, me=this.me, ctx=this.ctx||{};
+    if(!P) return;
+    body.dataset.phase=P.phase;
+    body.style.setProperty("--lamp", lampVar(P.lamp));
+    if(P.phase==="lobby"){ this.lobby(P, ctx); return; }
+    if(P.phase!=="over" && !me){ this.syncing(ctx); return; }
+    if(P.phase==="reveal"){ this.reveal(P, me); return; }
+    if(P.phase==="night"){ this.night(P, me, ctx); return; }
+    if(P.phase==="result"){ this.result(P); return; }
+    if(P.phase==="day"){ this.day(P, me); return; }
+    if(P.phase==="vote"){ this.vote(P, me, ctx); return; }
+    if(P.phase==="over"){ this.over(P); return; }
+  },
+
+  lobby(P, ctx){
+    const list=P.players.map(p=>`<div class="sus ${p.id===ctx.token?"me":""}"><div class="nm">${esc(p.name)}</div><div class="st">${p.seen?"متّصل":"…"}</div></div>`).join("")
+      || `<div class="muted sm" style="grid-column:1/-1;text-align:center;padding:18px">لا أحد بعد…</div>`;
+    screen.innerHTML=`<div class="stack fade">
+      <div class="row spread"><span class="eyebrow">غرفة الانتظار</span><span class="pill"><span class="dot"></span> ${esc(ctx.name||"")}</span></div>
+      <div class="banner"><div class="ph">بانتظار البدء</div><div class="sub">${P.players.length} في الغرفة</div></div>
+      <div class="grid">${list}</div>
+      <footer>سيبدأ الحكم اللعبة متى ما اكتمل أصحابك.</footer></div>`;
+    this.flipped=false;
+  },
+
+  syncing(ctx){
+    screen.innerHTML=`<div class="stack center fade">
+      <div class="eyebrow">مزامنة…</div>
+      <div class="banner"><div class="ph">جارٍ استلام دورك</div><div class="sub">لحظات من فضلك</div></div></div>`;
+    if(ctx && ctx.resync) ctx.resync();
+  },
+
+  reveal(P, me){
+    const r=(me&&me.role)||"citizen";
+    screen.innerHTML=`<div class="stack center fade">
+      <div class="eyebrow">دورك السرّي</div>
+      <div class="role-wrap"><div class="role-card role-${r}" id="rc">
+        <div class="face back"><div class="seal">؟</div><div class="sm">انقر للكشف</div></div>
+        <div class="face front role-${r}">
+          <div class="ic">${roleIcon(r)}</div><div class="rl disp">${roleAr(r)}</div>
+          <div class="ds">${roleDesc(r)}</div></div></div></div>
+      ${r==="mafia"&&me.teammates?`<div class="note mafia">شركاؤك: ${me.teammates.map(t=>esc(t.name)).join(" · ")||"—"}</div>`:""}
+      <div class="timer"><b id="tmr">--</b><span>تبدأ الليلة بعد</span></div>
+      <div class="sm muted">احفظ دورك ولا تكشفه لأحد.</div></div>`;
+    const rc=$("#rc");
+    if(!this.flipped){ rc.onclick=()=>{ rc.classList.add("flip"); this.flipped=true; }; }
+    else rc.classList.add("flip");
+  },
+
+  night(P, me, ctx){
+    const myAlive=me?me.alive:true;
+    if(!myAlive){ this.deadView("الليل","المدينة نائمة… أنت تراقب من بعيد."); return; }
+    if(me && me.prompt && !me.prompt.done){ this.actionView(me, ctx); return; }
+    if(me && me.prompt && me.prompt.done){ this.waitView(me); return; }
+    let extra="";
+    if(me.role==="mafia" && me.board) extra=`<div class="note mafia">قرار المافيا: ${me.board.map(b=>`${esc(b.name)}${b.target?" → "+esc(b.target):" …"}`).join(" | ")}</div>`;
+    if(me.role==="detective" && me.notes&&me.notes.length) extra=this.detNotes(me.notes);
+    screen.innerHTML=`<div class="stack center fade">
+      <div class="banner"><div class="ph">حلّ الليل</div><div class="sub">المدينة نائمة… يتحرّك من في الظلام.</div></div>
+      <div style="font-size:54px" class="blink">🌙</div>
+      ${extra}
+      <div class="sm muted">انتظر شروق الصباح.</div></div>`;
+  },
+
+  result(P){
+    screen.innerHTML=`<div class="stack center fade">
+      <div class="banner"><div class="ph">${esc(P.title)}</div><div class="sub">${esc(P.sub||"")}</div></div>
+      ${this.lastReveal(P)}
+      <div class="timer"><b id="tmr">--</b><span>الجولة القادمة</span></div></div>`;
+  },
+
+  day(P, me){
+    const myAlive=me?me.alive:true;
+    if(!myAlive){ this.deadView("النهار","المدينة تتناقش… أنت تتابع بصمت."); return; }
+    screen.innerHTML=`<div class="stack center fade">
+      <div class="banner"><div class="ph">${esc(P.title)}</div><div class="sub">${esc(P.sub||"")}</div></div>
+      <div style="font-size:54px">🏙️</div>
+      <div class="note">تناقشوا في الدسكورد: من تشكّون فيه؟ بعد انتهاء الوقت يبدأ التصويت.</div>
+      ${me&&me.role==="detective"&&me.notes&&me.notes.length?this.detNotes(me.notes):""}
+      <div class="timer"><b id="tmr">--</b><span>وقت النقاش</span></div></div>`;
+  },
+
+  vote(P, me, ctx){
+    const myAlive=me?me.alive:true;
+    if(!myAlive){ this.deadView("التصويت","لا يحقّ للخارجين التصويت."); return; }
+    if(me && me.prompt && !me.prompt.done){ this.actionView(me, ctx, P.tally); return; }
+    this.waitView(me, "أرسلت صوتك. بانتظار البقية…");
+  },
+
+  over(P){
+    const win=P.winner;
+    body.style.setProperty("--lamp", win==="town"?"var(--green)":"var(--crimson)");
+    const reveal=(P.reveal||[]).map(p=>`<div class="sus ${p.alive?"":"dead"}">
+      <span class="tag ${p.role==="mafia"?"mafia":"town"}">${roleAr(p.role)}</span>
+      <div class="nm">${esc(p.name)}</div><div class="st">${p.alive?"نجا":"خرج"}</div></div>`).join("");
+    screen.innerHTML=`<div class="stack center fade">
+      <div class="eyebrow">انتهت اللعبة</div>
+      <div class="brand disp" style="color:${win==="town"?"var(--green)":"var(--crimson)"}">${win==="town"?"فاز أهل المدينة":"فازت المافيا"}</div>
+      <div class="lead">${win==="town"?"كُشفت المافيا وعادت المدينة آمنة.":"سيطرت المافيا على المدينة."}</div>
+      <div class="grid" style="width:100%">${reveal}</div>
+      <div class="sm muted">${this.ctx&&this.ctx.isAdmin?"ابدأ جولة جديدة من الأدوات بالأسفل.":"بانتظار أن يبدأ الحكم جولة جديدة."}</div></div>`;
+    this.flipped=false;
+  },
+
+  actionView(me, ctx, tally){
+    const pr=me.prompt, head=actionHead(pr.kind);
+    const cand=pr.cand.map(c=>{
+      const v = tally && tally[c.id]? `<span class="votes">${tally[c.id]}</span>`:"";
+      return `<div class="sus clk" data-pick="${c.id}"><div class="nm">${esc(c.name)}</div><div class="st">${head.verb}</div>${v}</div>`;
+    }).join("");
+    let extra="";
+    if(me.role==="mafia"&&me.board) extra=`<div class="note mafia">شركاؤك صوّتوا: ${me.board.map(b=>`${esc(b.name)}${b.target?" → "+esc(b.target):" …"}`).join(" | ")}</div>`;
+    if(me.role==="detective"&&me.notes&&me.notes.length) extra=this.detNotes(me.notes);
+    const skip = pr.kind==="vote"? `<button class="ghost full" data-skip="1">تخطّي الجولة (بلا طرد)</button>`:"";
+    screen.innerHTML=`<div class="stack fade">
+      <div class="banner"><div class="ph">${head.title}</div><div class="sub">${head.sub}</div>
+        <div class="timer"><b id="tmr">--</b><span>اختر بسرعة</span></div></div>
+      ${extra}
+      <div class="grid">${cand}</div>
+      ${skip}</div>`;
+    screen.querySelectorAll("[data-pick]").forEach(el=>el.onclick=()=>{
+      screen.querySelectorAll(".sus").forEach(s=>s.classList.remove("sel")); el.classList.add("sel");
+      const action = pr.kind==="vote"?"vote":(pr.kind==="protect"?"protect":pr.kind==="kill"?"kill":"investigate");
+      ctx.act(action, el.dataset.pick);
+    });
+    const sk=screen.querySelector("[data-skip]"); if(sk) sk.onclick=()=>ctx.act("skipvote",null);
+  },
+
+  waitView(me, msg){
+    let extra="";
+    if(me&&me.role==="detective"&&me.notes&&me.notes.length) extra=this.detNotes(me.notes);
+    if(me&&me.role==="mafia"&&me.board) extra=`<div class="note mafia">قرار المافيا: ${me.board.map(b=>`${esc(b.name)}${b.target?" → "+esc(b.target):" …"}`).join(" | ")}</div>`;
+    screen.innerHTML=`<div class="stack center fade">
+      <div class="banner"><div class="ph">تمّ ✓</div><div class="sub">${esc(msg||"أرسلت اختيارك. بانتظار البقية…")}</div></div>
+      <div style="font-size:48px" class="blink">⏳</div>${extra}
+      <div class="timer"><b id="tmr">--</b><span>تنتهي المرحلة</span></div></div>`;
+  },
+  deadView(ph, sub){
+    screen.innerHTML=`<div class="stack center fade">
+      <div class="banner"><div class="ph">${esc(ph)}</div><div class="sub">${esc(sub)}</div></div>
+      <div style="font-size:48px;opacity:.5">⚰️</div>
+      <div class="note">خرجت من اللعبة، لكن تابع حتى النهاية بصمت.</div></div>`;
+  },
+  detNotes(notes){ return `<div class="note cyan"><b>دفتر المحقّق</b><br>${notes.map(n=>`${esc(n.name)} — ${n.isMafia?'<b style="color:#ff8197">مافيا</b>':'بريء'}`).join("<br>")}</div>`; },
+  lastReveal(P){
+    const d=P.dead&&P.dead.length?P.dead[P.dead.length-1]:null;
+    if(!d) return `<div class="note green">مرّت بسلام — لم يُكشف أحد.</div>`;
+    if(!d.role){ // الأوراق مخفية
+      return `<div class="role-wrap"><div class="role-card flip role-hidden"><div class="face back"></div>
+        <div class="face front role-hidden"><div class="ic">🚪</div>
+        <div class="rl disp">${esc(d.name)}</div><div class="ds">خرج من اللعبة</div></div></div></div>`;
+    }
+    const m=d.role==="mafia";
+    return `<div class="role-wrap"><div class="role-card flip role-${d.role}"><div class="face back"></div>
+      <div class="face front role-${d.role}"><div class="ic">${roleIcon(d.role)}</div>
+      <div class="rl disp">${esc(d.name)}</div><div class="ds">كان <b style="color:${m?'#ff8197':'var(--green)'}">${roleAr(d.role)}</b></div></div></div></div>`;
+  },
+  tick(){
+    const el=$("#tmr"); if(!el) return;
+    const ends=(this.pub&&this.pub.timerEnds)||(this.me&&this.me.prompt&&this.me.prompt.ends);
+    if(!ends){ el.textContent="--"; return; }
+    const r=Math.max(0,Math.ceil((ends-now())/1000)); el.textContent=String(r).padStart(2,"0");
+  },
+};
+
+/* ===========================================================================
+   الحكم (الأدمن): يدير اللعبة (البوت) ويلعب فيها كلاعب — بلا رؤية لأدوار غيره
+   =========================================================================== */
+const Host = {
+  S:null, ticking:false, resolving:false, topic:null, _sub:null,
+
+  mafiaCount(n){ return n<=7 ? 2 : 3; },
+
+  create({name, mins, reveal}){
+    const id=rid(8), adminToken=rid(8);
+    this.S={
+      id, v:1, phase:"lobby", round:0, adminToken,
+      talkSecs:(mins||DEFAULT_TALK_MIN)*60, revealCards:reveal!==false,
+      players:[{token:adminToken, name:name, pass:null, role:null, alive:true, seen:now(), isAdmin:true}],
+      night:null, day:null, dead:[], feed:[], winner:null,
+      timerEnds:null, timerLabel:"", lastNight:null, detectiveNotes:[],
+    };
+    localStorage.setItem("mafiaActiveHost", id);
+    this.save(); this.bind(); keepAwake(); Player.stop();
+    this.render();
+  },
+  resume(id){
+    const raw=localStorage.getItem("mafiaHost:"+id);
+    if(!raw) return false;
+    try{ this.S=JSON.parse(raw); }catch{ return false; }
+    this.bind(); keepAwake(); this.broadcast(); this.render();
+    return true;
+  },
+  save(){ if(this.S) localStorage.setItem("mafiaHost:"+this.S.id, JSON.stringify(this.S)); },
+
+  bind(){
+    this.topic=topics(this.S.id);
+    if(this._sub) this._sub.close();
+    this._sub=sub(this.topic.inbox, m=>this.onInbox(m));
+    if(!this.ticking){ this.ticking=true; setInterval(()=>this.tick(),250); }
+  },
+
+  alive(){ return this.S.players.filter(p=>p.alive); },
+  aliveRole(r){ return this.alive().filter(p=>p.role===r); },
+  byToken(t){ return this.S.players.find(p=>p.token===t); },
+  byName(n){ return this.S.players.find(p=>p.name===n); },
+  name(t){ const p=this.byToken(t); return p?p.name:"—"; },
+  admin(){ return this.byToken(this.S.adminToken); },
+
+  /* ---------- استقبال رسائل اللاعبين ---------- */
+  onInbox(m){
+    if(!m||!m.t) return;
+    const S=this.S;
+    if(m.t==="join"){
+      const nm=(m.name||"").trim().slice(0,18);
+      const pass=(m.pass||"").trim();
+      if(!nm){ this.nack(m.token,"اكتب اسمك."); return; }
+      const known=this.byToken(m.token);
+      if(known){ known.seen=now(); this.broadcast(); this.pushPrivate(known); return; } // إعادة اتصال بنفس الجهاز
+      const same=this.byName(nm);
+      if(same){
+        // الاسم موجود: يسمح بالاستعادة فقط بكلمة المرور الصحيحة (جهاز جديد / تحديث)
+        if(same.isAdmin){ this.nack(m.token,"هذا اسم الحكم، اختر غيره."); return; }
+        if((same.pass||"")===pass){ same.token=m.token; same.seen=now(); this.broadcast(); this.pushPrivate(same);
+          this.bumpFeed(`عاد ${nm} إلى الغرفة`); this.save(); return; }
+        this.nack(m.token,"الاسم محجوز وكلمة المرور غير صحيحة."); return;
+      }
+      if(S.phase!=="lobby"){ this.nack(m.token,"بدأت اللعبة — لا يمكن الدخول باسم جديد."); return; }
+      if(S.players.length>=10){ this.nack(m.token,"الغرفة ممتلئة (10)."); return; }
+      S.players.push({token:m.token, name:nm, pass, role:null, alive:true, seen:now(), isAdmin:false});
+      this.bumpFeed(`انضمّ ${nm} إلى الغرفة`);
+      this.save(); this.broadcast(); this.pushPrivate(this.byToken(m.token));
+      return;
+    }
+    if(m.t==="ping"){ const p=this.byToken(m.token); if(p) p.seen=now(); return; }
+    if(m.t==="resync"){ const p=this.byToken(m.token); if(p) p.seen=now(); this.broadcast(); if(p) this.pushPrivate(p); return; }
+    if(m.t==="act"){ this.onAct(m); return; }
+  },
+
+  onAct(m){
+    const S=this.S, p=this.byToken(m.token);
+    if(!p||!p.alive) return;
+    p.seen=now();
+    if(m.phase!==S.phase) return;
+    const N=S.night, D=S.day;
+    if(S.phase==="night_doctor" && p.role==="doctor"){ N.protect=m.target||null; this.afterDoctor(); }
+    else if(S.phase==="night_mafia" && p.role==="mafia"){ N.mafiaVotes[p.token]=m.target||null; this.afterMafiaVote(); }
+    else if(S.phase==="night_detective" && p.role==="detective"){ N.detTarget=m.target||null; this.afterDetective(); }
+    else if(S.phase==="day_vote"){ D.votes[p.token]= (m.action==="skipvote"? "SKIP" : (m.target||null)); this.afterVote(); }
+    this.save();
+  },
+
+  nack(token,msg){ if(token) pub(this.topic.pv(token), {t:"nack", v:this.S.v, msg}); },
+  bumpFeed(s){ this.S.feed.push(s); if(this.S.feed.length>40) this.S.feed.shift(); },
+
+  /* ---------- بدء اللعبة ---------- */
+  start(){
+    const S=this.S, n=S.players.length;
+    if(n<6){ toast("نحتاج 6 لاعبين على الأقل للبدء"); return; }
+    if(n>10){ toast("الحد الأقصى 10 لاعبين"); return; }
+    const mafia=this.mafiaCount(n);
+    const roles=[]; for(let i=0;i<mafia;i++) roles.push("mafia"); roles.push("doctor","detective");
+    while(roles.length<n) roles.push("citizen");
+    for(let i=roles.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [roles[i],roles[j]]=[roles[j],roles[i]]; }
+    const order=[...S.players]; for(let i=order.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
+    order.forEach((p,i)=>{ p.role=roles[i]; p.alive=true; });
+    S.round=1; S.dead=[]; S.winner=null; S.feed=[]; S.detectiveNotes=[]; S.lastNight=null;
+    this.bumpFeed(`بدأت اللعبة — ${n} لاعبين، ${mafia} مافيا`);
+    this.setPhase("reveal", SECONDS.reveal);
+    this.save(); this.broadcast(); this.pushAllPrivate();
+  },
+
+  setPhase(p, secs, label){
+    this.S.phase=p; this.S.timerEnds = secs? now()+secs*1000 : null; this.S.timerLabel=label||"";
+    this.resolving=false;
+  },
+
+  /* ---------- الليل ---------- */
+  beginNight(){ this.S.night={ protect:null, mafiaVotes:{}, mafiaTarget:null, detTarget:null, detResult:null }; this.beginDoctor(); },
+  beginDoctor(){ if(this.aliveRole("doctor").length===0) return this.beginMafia();
+    this.setPhase("night_doctor", SECONDS.doctor); this.broadcast(); this.pushSpecials(); },
+  afterDoctor(){ this.beginMafia(); },
+  beginMafia(){ this.setPhase("night_mafia", SECONDS.mafia); this.broadcast(); this.pushSpecials(); },
+  afterMafiaVote(){
+    const N=this.S.night, mafias=this.aliveRole("mafia");
+    const voted=mafias.filter(p=>N.mafiaVotes[p.token]!==undefined).length;
+    this.pushList(mafias);
+    if(voted>=mafias.length) this.beginDetective();
+  },
+  tallyMafia(){
+    const N=this.S.night, counts={};
+    Object.values(N.mafiaVotes).forEach(t=>{ if(t) counts[t]=(counts[t]||0)+1; });
+    let best=null,bc=0,ties=[];
+    for(const t in counts){ if(counts[t]>bc){bc=counts[t];best=t;ties=[t];} else if(counts[t]===bc){ties.push(t);} }
+    if(ties.length>1) best=ties[Math.floor(Math.random()*ties.length)];
+    N.mafiaTarget=best;
+  },
+  beginDetective(){
+    this.tallyMafia();
+    if(this.aliveRole("detective").length===0) return this.resolveNight();
+    this.setPhase("night_detective", SECONDS.detective); this.broadcast(); this.pushSpecials();
+  },
+  afterDetective(){
+    const N=this.S.night;
+    if(N.detTarget){
+      const tp=this.byToken(N.detTarget);
+      N.detResult={ name:tp?tp.name:"—", isMafia: tp? tp.role==="mafia":false };
+      this.S.detectiveNotes=this.S.detectiveNotes||[]; this.S.detectiveNotes.push(N.detResult);
+    }
+    this.resolveNight();
+  },
+  resolveNight(){
+    const S=this.S, N=S.night;
+    if(N.mafiaTarget==null) this.tallyMafia();
+    let killedName=null, killedRole=null, saved=false;
+    if(N.mafiaTarget){
+      if(N.mafiaTarget===N.protect){ saved=true; }
+      else{ const v=this.byToken(N.mafiaTarget);
+        if(v&&v.alive){ v.alive=false; killedName=v.name; killedRole=v.role; S.dead.push({name:v.name, role:v.role}); } }
+    }
+    S.lastNight = killedName? {name:killedName, role:killedRole} : (saved? {saved:true} : null);
+    if(killedName) this.bumpFeed(S.revealCards? `الليلة ${S.round}: قُتل ${killedName} — كان ${roleAr(killedRole)}` : `الليلة ${S.round}: قُتل ${killedName}`);
+    else this.bumpFeed(`الليلة ${S.round}: لم يمت أحد`);
+    if(this.checkWin()) return;
+    this.setPhase("night_result", SECONDS.nightResult); this.broadcast(); this.pushAllPrivate();
+  },
+
+  /* ---------- النهار ---------- */
+  beginDay(){ this.S.day={ votes:{}, expelled:null }; this.setPhase("day_talk", this.S.talkSecs); this.broadcast(); this.pushAllPrivate(); },
+  beginVote(){ if(this.S.phase!=="day_talk") return; this.S.day.votes={}; this.setPhase("day_vote", SECONDS.vote); this.broadcast(); this.pushAllPrivate(); },
+  afterVote(){ const alive=this.alive().length, voted=Object.keys(this.S.day.votes).length; this.broadcast(); if(voted>=alive) this.resolveDay(); },
+  resolveDay(){
+    const S=this.S, D=S.day, counts={};
+    Object.values(D.votes).forEach(t=>{ if(t&&t!=="SKIP") counts[t]=(counts[t]||0)+1; });
+    let best=null,bc=0,ties=[];
+    for(const t in counts){ if(counts[t]>bc){bc=counts[t];best=t;ties=[t];} else if(counts[t]===bc){ties.push(t);} }
+    if(bc===0||ties.length>1){ D.expelled=null; this.bumpFeed(`النهار ${S.round}: لم يُطرد أحد`); }
+    else{ const p=this.byToken(best); if(p){ p.alive=false; D.expelled={name:p.name, role:p.role}; S.dead.push({name:p.name, role:p.role});
+      this.bumpFeed(S.revealCards? `النهار ${S.round}: طُرد ${p.name} — كان ${roleAr(p.role)}` : `النهار ${S.round}: طُرد ${p.name}`); } }
+    if(this.checkWin()) return;
+    this.setPhase("day_result", SECONDS.dayResult); this.broadcast(); this.pushAllPrivate();
+  },
+  nextRound(){ this.S.round++; this.beginNight(); },
+
+  checkWin(){
+    const aliveMafia=this.aliveRole("mafia").length, aliveTown=this.alive().length-aliveMafia;
+    let w=null;
+    if(aliveMafia===0) w="town"; else if(aliveMafia>=aliveTown) w="mafia";
+    if(w){ this.S.winner=w; this.bumpFeed(w==="town"?"فاز أهل المدينة! 🏙️":"فازت المافيا! 🔪");
+      this.setPhase("over",null); this.broadcast(); this.pushAllPrivate(); this.save(); return true; }
+    return false;
+  },
+
+  /* ---------- المؤقّت (قلب البوت) ---------- */
+  tick(){
+    const S=this.S; if(!S) return;
+    if(S.timerEnds && now()>=S.timerEnds && !this.resolving){
+      this.resolving=true; const p=S.phase;
+      if(p==="reveal") this.beginNight();
+      else if(p==="night_doctor") this.beginMafia();
+      else if(p==="night_mafia") this.beginDetective();
+      else if(p==="night_detective") this.resolveNight();
+      else if(p==="night_result") this.beginDay();
+      else if(p==="day_talk") this.beginVote();
+      else if(p==="day_vote") this.resolveDay();
+      else if(p==="day_result") this.nextRound();
+      this.save();
+    }
+    if(App.mode==="host" && S.phase!=="lobby") UI.tick();
+  },
+
+  /* ---------- بناء الحالة العامة والخاصة ---------- */
+  buildPublic(){
+    const S=this.S, phase=mapPublic(S.phase), banner=bannerFor(S, phase);
+    const pl=S.players.map(p=>({id:p.token, name:p.name, alive:p.alive, seen:(now()-p.seen)<25000}));
+    const dead=S.dead.map(d=>({name:d.name, role:S.revealCards? d.role : null}));
+    let tally=null;
+    if(S.phase==="day_vote" && S.day){ tally={}; Object.values(S.day.votes).forEach(t=>{ if(t&&t!=="SKIP") tally[t]=(tally[t]||0)+1; }); tally.__voted=Object.keys(S.day.votes).length; }
+    let reveal=null;
+    if(S.phase==="over") reveal=S.players.map(p=>({name:p.name, role:p.role, alive:p.alive}));
+    return { t:"state", v:S.v, id:S.id, phase, round:S.round,
+      players:pl, dead, feed:S.feed.slice(-12),
+      title:banner.title, sub:banner.sub, lamp:banner.lamp,
+      timerEnds:S.timerEnds, timerLabel:S.timerLabel,
+      tally, reveal, winner:S.winner, counts:{alive:this.alive().length} };
+  },
+  buildPrivate(p){
+    const S=this.S; const out={ t:"you", v:S.v, role:p.role, alive:p.alive, prompt:null, board:null, notes:null };
+    if(p.role==="mafia") out.teammates=S.players.filter(x=>x.role==="mafia"&&x.token!==p.token).map(x=>({name:x.name,alive:x.alive}));
+    if(p.role==="detective" && S.detectiveNotes) out.notes=S.detectiveNotes;
+    if(p.alive){
+      if(S.phase==="night_doctor" && p.role==="doctor")
+        out.prompt={ kind:"protect", ends:S.timerEnds, done:(S.night&&S.night.protect!==null), cand:this.alive().map(x=>({id:x.token,name:x.name})) };
+      if(S.phase==="night_mafia" && p.role==="mafia"){
+        const N=S.night;
+        out.prompt={ kind:"kill", ends:S.timerEnds, done:(N&&N.mafiaVotes[p.token]!==undefined), cand:this.alive().filter(x=>x.role!=="mafia").map(x=>({id:x.token,name:x.name})) };
+        out.board=this.aliveRole("mafia").map(x=>({name:x.name, target:N&&N.mafiaVotes[x.token]? this.name(N.mafiaVotes[x.token]):null}));
+      }
+      if(S.phase==="night_detective" && p.role==="detective")
+        out.prompt={ kind:"investigate", ends:S.timerEnds, done:(S.night&&S.night.detTarget!==null), cand:this.alive().filter(x=>x.token!==p.token).map(x=>({id:x.token,name:x.name})) };
+      if(S.phase==="day_vote")
+        out.prompt={ kind:"vote", ends:S.timerEnds, done:(S.day&&S.day.votes[p.token]!==undefined), cand:this.alive().filter(x=>x.token!==p.token).map(x=>({id:x.token,name:x.name})) };
+    }
+    return out;
+  },
+
+  broadcast(){ this.S.v++; this.save(); pub(this.topic.pub, this.buildPublic()); this.render(); },
+  pushPrivate(p){ pub(this.topic.pv(p.token), this.buildPrivate(p)); },
+  pushAllPrivate(){ this.S.players.forEach(p=>this.pushPrivate(p)); },
+  pushSpecials(){ this.S.players.forEach(p=>{ if(p.role==="mafia"||p.role==="doctor"||p.role==="detective") this.pushPrivate(p); }); },
+  pushList(arr){ (arr||[]).forEach(p=>{ if(p) this.pushPrivate(p); }); },
+
+  /* ---------- العرض ---------- */
+  render(){
+    if(App.mode!=="host"||!this.S) return;
+    if(this.S.phase==="lobby"){ UI.clear(); this.dashboard(); return; }
+    // الحكم يلعب كلاعب: نعرض واجهته الخاصة من الحالة المحلية مباشرة
+    const ctx={ act:(a,t)=>this.localAct(a,t), isAdmin:true, name:this.admin().name, token:this.S.adminToken };
+    UI.show(this.buildPublic(), this.buildPrivate(this.admin()), ctx);
+    this.appendTools();
+  },
+  localAct(action, target){ this.onAct({token:this.S.adminToken, phase:this.S.phase, action, target}); this.render(); },
+
+  appendTools(){
+    const S=this.S;
+    let btns="";
+    if(S.phase==="over") btns=`<button class="btn" data-h="again">جولة جديدة 🔄</button><button class="ghost" data-h="end">إنهاء الغرفة</button>`;
+    else btns=`<button class="ghost" data-h="skip">تخطّي المرحلة ⏭</button><button class="ghost" data-h="end">إنهاء</button>`;
+    const div=document.createElement("div"); div.className="htools"; div.innerHTML=btns;
+    screen.appendChild(div);
+  },
+
+  dashboard(){
+    const S=this.S, link=baseURL()+"#j="+S.id, n=S.players.length, ready=n>=6&&n<=10;
+    const list=S.players.map(p=>`<div class="sus ${p.isAdmin?"me":""}">
+        ${p.isAdmin?'<span class="tag host">الحكم</span>':""}
+        <div class="nm">${esc(p.name)}</div>
+        <div class="st">${p.isAdmin?"أنت":((now()-p.seen)<25000?"متّصل":"…")}</div></div>`).join("");
+    body.dataset.phase="lobby"; body.style.setProperty("--lamp","var(--amber)");
+    screen.innerHTML=`<div class="stack fade">
+      <div class="row spread"><span class="eyebrow">غرفة جديدة</span><span class="pill"><span class="dot"></span> أنت الحكم: ${esc(S.players[0].name)}</span></div>
+
+      <div class="card stack">
+        <div class="sm muted">أرسل الرابط لأصحابك في الدسكورد. كل واحد يدخل باسمه ويحط كلمة مرور تحمي اسمه.</div>
+        <label class="fld">رابط الدخول</label>
+        <div class="row"><input class="mono grow" id="lnk" readonly value="${esc(link)}"><button class="btn" data-h="copylink">نسخ</button></div>
+      </div>
+
+      <div class="card stack">
+        <div class="switch"><div class="lbl">مدّة النقاش<small>وقت الكلام قبل التصويت كل جولة</small></div>
+          <div class="num"><button data-h="min-">−</button><b>${S.talkSecs/60}</b><span>دقيقة</span><button data-h="min+">+</button></div></div>
+        <hr>
+        <div class="switch"><div class="lbl">إظهار ورقة من يخرج<small>تُكشف وظيفة المقتول/المطرود للجميع</small></div>
+          <div class="tgl ${S.revealCards?"on":""}" data-h="reveal"></div></div>
+      </div>
+
+      <div class="row spread"><span class="pill">${n} / 10 لاعب</span><span class="sm muted">للبدء: 6 على الأقل</span></div>
+      <div class="grid">${list}</div>
+
+      <button class="btn big full" data-h="start" ${ready?"":"disabled"}>ابدأ اللعبة (${n})</button>
+      <button class="ghost full" data-h="end">إلغاء الغرفة</button>
+      <footer>أبقِ هذه الصفحة مفتوحة طوال اللعبة — جهازك هو من يدير اللعبة.</footer>
+    </div>`;
+  },
+
+  onClick(h){
+    const S=this.S;
+    if(h==="copylink"){ navigator.clipboard?.writeText($("#lnk").value); toast("تم نسخ الرابط"); }
+    else if(h==="min-"){ S.talkSecs=Math.max(60, S.talkSecs-60); this.save(); this.dashboard(); }
+    else if(h==="min+"){ S.talkSecs=Math.min(600, S.talkSecs+60); this.save(); this.dashboard(); }
+    else if(h==="reveal"){ S.revealCards=!S.revealCards; this.save(); this.dashboard(); }
+    else if(h==="start"){ this.start(); }
+    else if(h==="skip"){ if(S.timerEnds) S.timerEnds=now(); }
+    else if(h==="again"){ this.start(); }
+    else if(h==="end"){ if(confirm("إنهاء الغرفة؟")){ localStorage.removeItem("mafiaActiveHost"); localStorage.removeItem("mafiaHost:"+S.id); location.hash=""; location.reload(); } }
+  },
+};
+
+/* ===========================================================================
+   اللاعب
+   =========================================================================== */
+const Player = {
+  id:null, token:null, name:null, pass:null, pendName:"", pendPass:"",
+  pub:null, me:null, _subPub:null, _subPv:null, joining:false, lastErr:"", timer:null,
+
+  begin(id){
+    this.id=id; this.topic=topics(id);
+    const saved=localStorage.getItem("mafiaMe:"+id);
+    if(saved){ try{ const m=JSON.parse(saved); this.token=m.token; this.name=m.name; this.pass=m.pass; this.connect(); this.sendJoin(); return; }catch{} }
+    this.step1();
+  },
+  stop(){ this._subPub?.close(); this._subPv?.close(); },
+
+  connect(){
+    this._subPub?.close(); this._subPv?.close();
+    this._subPub=sub(this.topic.pub, m=>this.onPub(m));
+    this._subPv =sub(this.topic.pv(this.token), m=>this.onPv(m), ()=>this.resync());
+    if(!this.timer) this.timer=setInterval(()=>{ if(this.token) pub(this.topic.inbox,{t:"ping",token:this.token}); }, 25000);
+  },
+  resync(){ if(this.token) pub(this.topic.inbox,{t:"resync",token:this.token}); },
+
+  /* خطوة 1: اكتب اسمك واختر كلمة مرور */
+  step1(){
+    body.dataset.phase="lobby"; body.style.setProperty("--lamp","var(--amber)");
+    screen.innerHTML=`<div class="stack center fade" style="margin:auto 0">
+      <div class="eyebrow">المدينة</div>
+      <div class="brand disp">المافيا</div>
+      <div class="lead">اكتب اسمك واختر كلمة مرور تحمي اسمك من غيرك.</div>
+      <div class="card stack" style="width:100%;text-align:right">
+        <div><label class="fld">اسمك في اللعبة</label><input id="jn" maxlength="18" placeholder="مثال: خالد" value="${esc(this.pendName)}"></div>
+        <div><label class="fld">كلمة المرور (تحفظها لنفسك)</label><input id="jp" maxlength="20" placeholder="••••••" value="${esc(this.pendPass)}"></div>
+        <div class="err" id="jerr">${esc(this.lastErr)}</div>
+        <button class="btn big full" id="jbtn">تأكيد</button>
+      </div>
+    </div>`;
+    $("#jbtn").onclick=()=>{
+      const nm=$("#jn").value.trim(), pw=$("#jp").value.trim();
+      if(!nm){ this.err("اكتب اسمك"); return; }
+      if(pw.length<3){ this.err("كلمة المرور 3 أحرف على الأقل"); return; }
+      this.pendName=nm; this.pendPass=pw; this.lastErr=""; this.step2();
+    };
+  },
+  /* خطوة 2: قفل على اسمك — أعد كلمة المرور للدخول */
+  step2(){
+    screen.innerHTML=`<div class="stack center fade" style="margin:auto 0">
+      <div class="eyebrow">تأكيد الدخول</div>
+      <div class="lockchip">🔒 ${esc(this.pendName)}</div>
+      <div class="lead">اسمك محجوز لك. أعد كتابة كلمة المرور للدخول.</div>
+      <div class="card stack" style="width:100%;text-align:right">
+        <div><label class="fld">كلمة المرور</label><input id="jp2" maxlength="20" placeholder="••••••"></div>
+        <div class="err" id="jerr"></div>
+        <button class="btn big full" id="jbtn">دخول</button>
+        <button class="ghost full" id="jback">رجوع / تغيير الاسم</button>
+      </div>
+    </div>`;
+    $("#jp2").focus();
+    $("#jbtn").onclick=()=>{
+      const pw=$("#jp2").value.trim();
+      if(pw!==this.pendPass){ this.err("كلمة المرور غير مطابقة"); return; }
+      this.token=rid(8); this.name=this.pendName; this.pass=this.pendPass; this.joining=true;
+      this.connect(); this.sendJoin();
+      $("#jbtn").disabled=true; $("#jbtn").textContent="جارٍ الدخول…";
+      setTimeout(()=>{ if(this.joining&&!this.pub){ const b=$("#jbtn"); if(b){b.disabled=false;b.textContent="دخول";} this.err("لا يوجد ردّ. تأكد أن الحكم فتح الغرفة وأن الإنترنت يعمل."); } },6000);
+    };
+    $("#jback").onclick=()=>this.step1();
+  },
+  sendJoin(){ pub(this.topic.inbox,{t:"join", token:this.token, name:this.name, pass:this.pass}); },
+  err(s){ this.lastErr=s; const e=$("#jerr"); if(e) e.textContent=s; },
+
+  onPub(m){
+    if(m.t!=="state") return; if(this.pub && m.v<this.pub.v) return; this.pub=m;
+    if(this.joining){ const meIn=m.players.find(p=>p.id===this.token); if(meIn){ this.confirmJoin(); } }
+    this.render();
+  },
+  onPv(m){
+    if(m.t==="nack"){ this.joining=false; localStorage.removeItem("mafiaMe:"+this.id);
+      const b=$("#jbtn"); if(b){ b.disabled=false; b.textContent="دخول"; } this.err(m.msg||"تعذّر الدخول");
+      if(!this.pub) this.step2(); return; }
+    if(m.t==="you"){ if(this.me && m.v<this.me.v) return; this.me=m; if(this.joining) this.confirmJoin(); this.render(); }
+  },
+  confirmJoin(){ if(!this.joining) return; this.joining=false; localStorage.setItem("mafiaMe:"+this.id, JSON.stringify({token:this.token,name:this.name,pass:this.pass})); },
+
+  act(action, target){
+    pub(this.topic.inbox,{t:"act", token:this.token, phase:hostPhaseFromPublic(this.pub), action, target});
+    toast("تم الإرسال ✓");
+  },
+
+  render(){
+    if(App.mode!=="player"||!this.pub) return;
+    const ctx={ act:(a,t)=>this.act(a,t), resync:()=>this.resync(), name:this.name, token:this.token };
+    UI.show(this.pub, this.me, ctx);
+    UI.tick();
+  },
+};
+
+function hostPhaseFromPublic(P){
+  if(!P) return "";
+  if(P.phase==="vote") return "day_vote";
+  const me=Player.me||(UI&&UI.me);
+  if(me&&me.prompt) return {protect:"night_doctor",kill:"night_mafia",investigate:"night_detective",vote:"day_vote"}[me.prompt.kind]||P.phase;
+  return P.phase;
+}
+
+/* ===========================================================================
+   التوجيه: حكم أم لاعب؟
    =========================================================================== */
 const App = { mode:null };
 
+setInterval(()=>{ UI.tick(); }, 250);
+
 function route(){
-  const hash=location.hash;
-  const j = hash.match(/#j=([A-Z0-9]+)/i);
-  if(j){ App.mode="player"; Player.begin(j[1]); attachClicks(); return; }
-  // لا يوجد رابط انضمام → الصفحة الرئيسية / الحكم
+  const j=location.hash.match(/#j=([A-Z0-9]+)/i);
+  if(j){ App.mode="player"; Player.begin(j[1]); return; }
   const active=localStorage.getItem("mafiaActiveHost");
   renderLanding(active);
 }
 
 function renderLanding(activeHost){
-  App.mode="landing";
-  body.dataset.phase="lobby";
-  screen.innerHTML=`
-    <div class="stack center fade" style="margin:auto 0">
-      <div class="eyebrow">أهلاً في</div>
-      <div class="brand disp">المدينة</div>
-      <div class="lead">لعبة المافيا — دكتور، محقّق، ومواطنون… ومافيا تختبئ بينهم.<br>استضِف غرفة وأرسل الرابط لأصدقائك في الدسكورد.</div>
-      <div class="card stack" style="width:100%">
-        ${activeHost?`<button class="ghost full" id="resumeBtn">استئناف غرفتي السابقة</button>`:""}
-        <label class="fld">رمز الدخول للغرفة (4 أرقام)</label>
-        <input id="hp" class="pin" inputmode="numeric" maxlength="4" placeholder="••••">
-        <div class="err" id="herr"></div>
-        <button class="btn big full" id="hostBtn">إنشاء غرفة جديدة</button>
-      </div>
-      <div class="seg" style="width:100%">
-        <div class="chip"><b>6–10</b><span>لاعبين</span></div>
-        <div class="chip"><b>2–3</b><span>مافيا</span></div>
-        <div class="chip"><b>1+1</b><span>دكتور ومحقّق</span></div>
-      </div>
-      <footer>عندك رابط من صديق؟ افتحه مباشرة للدخول كلاعب.</footer>
-    </div>`;
-  $("#hp").oninput=e=>e.target.value=e.target.value.replace(/\D/g,"");
-  $("#hostBtn").onclick=()=>{ const pin=$("#hp").value.trim(); if(!/^\d{4}$/.test(pin)){ $("#herr").textContent="اكتب رمزاً من 4 أرقام"; return; }
-    App.mode="host"; Host.create(pin); };
+  App.mode="landing"; body.dataset.phase="lobby"; body.style.setProperty("--lamp","var(--amber)");
+  screen.innerHTML=`<div class="stack center fade" style="margin:auto 0">
+    <div class="eyebrow">أهلاً في</div>
+    <div class="brand disp">المدينة</div>
+    <div class="lead">لعبة المافيا — دكتور، محقّق، ومواطنون… ومافيا تختبئ بينهم.<br>أنشئ غرفة، العب مع أصحابك، وأنت الحكم.</div>
+    <div class="card stack" style="width:100%;text-align:right">
+      ${activeHost?`<button class="ghost full" id="resumeBtn">استئناف غرفتي السابقة</button><hr>`:""}
+      <div><label class="fld">اسمك (ستلعب أيضاً)</label><input id="an" maxlength="18" placeholder="مثال: كيم"></div>
+      <div class="switch"><div class="lbl">مدّة النقاش<small>وقت الكلام قبل التصويت</small></div>
+        <div class="num"><button type="button" id="mminus">−</button><b id="mval">${DEFAULT_TALK_MIN}</b><span>دقيقة</span><button type="button" id="mplus">+</button></div></div>
+      <div class="switch"><div class="lbl">إظهار ورقة من يخرج<small>كشف وظيفة المقتول/المطرود</small></div>
+        <div class="tgl on" id="rtgl"></div></div>
+      <div class="err" id="herr"></div>
+      <button class="btn big full" id="hostBtn">إنشاء غرفة جديدة</button>
+    </div>
+    <div class="seg" style="width:100%">
+      <div class="chip"><b>6–10</b><span>لاعبين</span></div>
+      <div class="chip"><b>2–3</b><span>مافيا</span></div>
+      <div class="chip"><b>1+1</b><span>دكتور ومحقّق</span></div>
+    </div>
+    <footer>عندك رابط من صديق؟ افتحه مباشرة للدخول كلاعب.</footer>
+  </div>`;
+  let mins=DEFAULT_TALK_MIN, reveal=true;
+  $("#mminus").onclick=()=>{ mins=Math.max(1,mins-1); $("#mval").textContent=mins; };
+  $("#mplus").onclick =()=>{ mins=Math.min(10,mins+1); $("#mval").textContent=mins; };
+  $("#rtgl").onclick =()=>{ reveal=!reveal; $("#rtgl").classList.toggle("on",reveal); };
+  $("#hostBtn").onclick=()=>{ const nm=$("#an").value.trim(); if(!nm){ $("#herr").textContent="اكتب اسمك"; return; }
+    App.mode="host"; Host.create({name:nm.slice(0,18), mins, reveal}); };
   const rb=$("#resumeBtn"); if(rb) rb.onclick=()=>{ App.mode="host"; if(!Host.resume(activeHost)){ toast("تعذّر الاستئناف"); App.mode="landing"; } };
 }
 
-/* تفويض النقرات لأزرار الهوست data-h */
-let clicksAttached=false;
-function attachClicks(){ if(clicksAttached) return; clicksAttached=true;
-  document.addEventListener("click", e=>{
-    const h=e.target.closest("[data-h]"); if(h && App.mode==="host"){ Host.onClick(h.dataset.h, e); }
-  });
-}
-attachClicks();
+/* تفويض نقرات أزرار الحكم data-h */
+document.addEventListener("click", e=>{
+  const h=e.target.closest("[data-h]");
+  if(h && App.mode==="host"){ Host.onClick(h.dataset.h); }
+});
 window.addEventListener("hashchange", ()=>location.reload());
 route();
 </script>
