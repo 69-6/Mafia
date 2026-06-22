@@ -168,6 +168,21 @@
   .htools button{flex:1; font-size:13px; padding:11px}
   .del{flex:none; width:34px; height:34px; padding:0; font-size:15px; background:transparent; color:var(--crimson); border:1px solid var(--line); border-radius:9px}
 
+  /* بطاقات شخصيات اللوبي */
+  .lobgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(98px,1fr)); gap:11px}
+  .lobcard{position:relative; aspect-ratio:3/4; border-radius:13px; border:1px solid var(--line);
+    background:repeating-linear-gradient(45deg,#15131c,#15131c 7px,#181522 7px,#181522 14px);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:8px;
+    transition:opacity .3s, border .3s, box-shadow .3s, transform .3s; opacity:.45}
+  .lobcard .seal{font-size:30px; line-height:1; filter:grayscale(1) opacity(.6)}
+  .lobcard .pn{font-weight:700; font-size:13px; text-align:center; word-break:break-word; color:var(--bone)}
+  .lobcard .ps{font-size:10px; letter-spacing:1px; color:var(--dim)}
+  .lobcard.on{opacity:1; border-color:var(--lamp); box-shadow:0 0 26px -8px color-mix(in srgb,var(--lamp) 60%,transparent); transform:translateY(-2px)}
+  .lobcard.on .seal{filter:none}
+  .lobcard.on .ps{color:var(--green)}
+  .lobcard.me{border-color:var(--white)}
+  .lobcard.me::after{content:"أنت"; position:absolute; top:6px; inset-inline-start:6px; font-size:9px; letter-spacing:1px; color:var(--lamp); background:#0d0f17; border:1px solid var(--line); border-radius:999px; padding:1px 6px}
+
   hr{border:none; border-top:1px solid var(--line); margin:4px 0}
   a.lnk{color:var(--lamp); text-decoration:none}
   .err{color:#ff8197; font-size:13px; min-height:18px}
@@ -326,13 +341,18 @@ const UI = {
 
   lobby(P, ctx){
     const ready=P.players.filter(p=>p.in).length, total=P.players.length;
-    const list=P.players.map(p=>`<div class="sus ${p.id&&p.id===ctx.token?"me":""} ${p.in?"":"dead"}"><div class="nm">${esc(p.name)}</div><div class="st">${p.in?"جاهز ✓":"بالانتظار…"}</div></div>`).join("")
-      || `<div class="muted sm" style="grid-column:1/-1;text-align:center;padding:18px">لا أحد بعد…</div>`;
+    const cards=P.players.map(p=>{
+      const on=p.in, mine=p.id&&p.id===ctx.token;
+      return `<div class="lobcard ${on?"on":""} ${mine?"me":""}">
+        <div class="seal">${on?"🎭":"❔"}</div>
+        <div class="pn">${esc(p.name)}</div>
+        <div class="ps">${on?"جاهز ✓":"بالانتظار"}</div></div>`;
+    }).join("") || `<div class="muted sm" style="grid-column:1/-1;text-align:center;padding:18px">لا أحد بعد…</div>`;
     screen.innerHTML=`<div class="stack fade">
       <div class="row spread"><span class="eyebrow">اللوبي</span><span class="pill"><span class="dot"></span> ${esc(ctx.name||"")}</span></div>
-      <div class="banner"><div class="ph">${ready} / ${total} جاهزين</div><div class="sub">تبدأ اللعبة تلقائياً عند دخول الجميع</div></div>
-      <div class="grid">${list}</div>
-      <footer>انتظر بقية اللاعبين…</footer></div>`;
+      <div class="banner"><div class="ph">${ready} / ${total} جاهزين</div><div class="sub">تبدأ اللعبة تلقائياً عند اكتمال العدد</div></div>
+      <div class="lobgrid">${cards}</div>
+      <footer>كل بطاقة لاعب — تضيء عند دخوله. انتظر بقية اللاعبين…</footer></div>`;
     this.flipped=false;
   },
 
